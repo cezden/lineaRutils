@@ -2,12 +2,22 @@
 % Please edit documentation in R/glmnet.R
 \name{glmnet.process.output}
 \alias{glmnet.process.output}
-\title{The glmnet postprocessor}
+\title{The glmnet model postprocessor}
 \usage{
-glmnet.process.output(glmnet.res)
+glmnet.process.output(glmnet.res, nonzero.coeffs.only = FALSE,
+  structural.filter.type = c("none", "initial", "final"))
 }
 \arguments{
 \item{glmnet.res}{the result of the \code{\link[glmnet]{glmnet}} function}
+
+\item{nonzero.coeffs.only}{if \code{TRUE} only the non-zero model coefficients are returned in the \code{coeffs} field}
+
+\item{structural.filter.type}{the type of the \code{steps} filter, selecting the steps from the \emph{lambda path} resulting in the change of the model structure:
+\itemize{
+  \item{(\code{"none"}): all steps are returned (default)}
+  \item{(\code{"initial"}): return initial step of each subpath consisting of the same variables}
+  \item{(\code{"final"}): return final step of each subpath consisting of the same variables}
+}}
 }
 \value{
 the \code{list} with following fields:
@@ -18,7 +28,7 @@ the \code{list} with following fields:
        \item{\code{lambda}}
        \item{\code{dev.ratio}}
        \item{\code{df}}
-       \item{\code{deviance}}
+       \item{\code{dev}}
      }
    }
    \item{\code{coeffs}: a \code{data.frame} with columns:
@@ -31,6 +41,7 @@ the \code{list} with following fields:
  }
 }
 \description{
-The function is based on the results returned by \code{\link[broom]{glmnet_tidiers}}
+The function is based on the results returned by \code{\link[broom]{glmnet_tidiers}},
+with an optional application of results filtering using the \code{\link{structural.changes.col.matrix}} function.
 }
 

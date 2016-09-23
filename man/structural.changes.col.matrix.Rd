@@ -4,7 +4,8 @@
 \alias{structural.changes.col.matrix}
 \title{Extraction of critical steps from Lasso path}
 \usage{
-structural.changes.col.matrix(mtx, strict = FALSE)
+structural.changes.col.matrix(mtx, initial.substeps = TRUE,
+  final.substeps = TRUE)
 }
 \arguments{
 \item{mtx}{the coefficients}

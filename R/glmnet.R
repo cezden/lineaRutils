@@ -1,129 +1,17 @@
-tmptmptmptmp <- function(){
-  # factor2dict
-  zz <- rep(LETTERS[1:10], 3)
-  zz.factor <- as.factor(zz)
-  f.subset <- unique(zz.factor)
-  data.frame(code = as.integer(f.subset), label = as.character(f.subset), stringsAsFactors = FALSE)
-
-  as.integer(f.subset)
-  as.character(f.subset)
-  levels(zz.factor)
-  as.numeric(zz.factor[1])
-  str(zz.factor)
-  df.describe.basic(airquality)
-  aqq <- airquality
-  #aqq$Month <- factor(airquality$Month, ordered = TRUE)
-  aqq$Month <- factor(airquality$Month)
-  aqq$Day <- factor(airquality$Day)
-  aqq$vvv <- rep(letters, 20)[nrow(aqq)]
-  aqq$vvv2 <- (aqq$vvv == "a")
-  tmp <- df.describe.basic(aqq)
-  tmp2 <- df.describe.factors(aqq)
-  tmp3 <- df.describe.factors(airquality)
-  str(Hmisc::contents(aqq))
-  tmp1 <- glmnet.df.as.matrix(aqq, use.and.remove.intercept = FALSE)
-  tmp11 <- tmp1$mat.x.transform
-  tmp12 <- tmp1$mat.x
-  tmp2 <- glmnet.df.as.matrix(aqq, use.and.remove.intercept = TRUE)
-  tmp21 <- tmp2$mat.x.transform
-  tmp22 <- tmp2$mat.x
-  tmp3 <- df.as.matrix.dummy(aqq)
-  tmp31 <- tmp3$mat.x.transform
-  tmp32 <- tmp3$mat.x %>% as.matrix()
-
-  aqq2 <- airquality %>% dplyr::select(Ozone, Month, Solar.R, Day, Wind, Temp)
-  aqq2$Month <- factor(airquality$Month)
-  aqq2$Day <- factor(airquality$Day)
-  tmp4 <- df.as.matrix.dummy(aqq2)
-  tmp4tmp <- tmp4$mat.x.transform
-
-
-  names(airquality)
-  tmp.tmp <- model.matrix(~. + Month:Day, data = df.x)
-  attr(tmp.tmp, "assign")
-  str(tmp.tmp)
-}
-
-
-
-
-
-#' Data frame to matrix conversion
+#' The glmnet model postprocessor
 #'
-#' Simple conversion of \code{data.frame}, with default factors encoding,
-#' using the \code{\link[stats]{model.matrix}} with formula \code{(~.)} or \code{(~. - 1)},
-#' and removal of resulting \code{intercept}
-#' column (if any).
-#'
-#' If the formula \code{(~.)} is used (\code{use.and.remove.intercept = TRUE}):
-#' \itemize{
-#'  \item{each factor is contrasted \emph{vs} its first level, that is}
-#'  \item{the first level of each factor is dropped and all the remaining levels are encoded
-#'  as the binary columns in the resulting matrix}
-#' }
-#'
-#' Function provides the description of the transformation, mapping the columns and factor levels to
-#' the resulting matrix.
-#'
-#' @param df.x (\code{data.frame}) to be encoded
-#' @param use.and.remove.intercept if \code{TRUE} the
-#' @export
-glmnet.df.as.matrix <- function(df.x, use.and.remove.intercept = FALSE){
-
-  if (use.and.remove.intercept) {
-    mat.x <- model.matrix(~., data = df.x)
-    mat.x.assign <- attr(mat.x, "assign")
-    mat.x.contrasts <- attr(mat.x, "contrasts")
-    # removal of the intercept
-    mat.x <- mat.x[, mat.x.assign != 0]
-    mat.x.assign <- mat.x.assign[mat.x.assign != 0]
-  } else {
-    mat.x <- model.matrix(~. - 1, data = df.x)
-    # no intercept, each level encoded
-    mat.x.assign <- attr(mat.x, "assign")
-    mat.x.contrasts <- attr(mat.x, "contrasts")
-  }
-  res.translator <- data.frame(
-    org.col.idx = mat.x.assign,
-    res.col.idx = 1:length(mat.x.assign),
-    org.col.name = names(df.x)[mat.x.assign],
-    res.col.name = colnames(mat.x),
-    stringsAsFactors = FALSE
-  )
-  if (!is.null(mat.x.contrasts)) {
-    con.mat.df <- data.frame(
-      org.col.name = names(mat.x.contrasts),
-      contrast.type = unlist(mat.x.contrasts),
-      row.names = NULL,
-      stringsAsFactors = FALSE
-    )
-    res.translator <- res.translator %>%
-      dplyr::left_join(
-        con.mat.df,
-        by = "org.col.name"
-      )
-  }
-  res.translator <- res.translator %>%
-    dplyr::mutate(
-      factor.level = stringi::stri_replace_first_fixed(
-        res.col.name,
-        org.col.name,
-        ""
-        )
-    )
-
-  list(
-    df.x = df.x,
-    mat.x = mat.x,
-    mat.x.transform = res.translator
-  )
-}
-
-#' The glmnet postprocessor
-#'
-#' The function is based on the results returned by \code{\link[broom]{glmnet_tidiers}}
+#' The function is based on the results returned by \code{\link[broom]{glmnet_tidiers}},
+#' with an optional application of results filtering using the \code{\link{structural.changes.col.matrix}} function.
 #'
 #' @param glmnet.res the result of the \code{\link[glmnet]{glmnet}} function
+#' @param nonzero.coeffs.only if \code{TRUE} only the non-zero model coefficients are returned in the \code{coeffs} field
+#' @param structural.filter.type the type of the \code{steps} filter, selecting the steps from the \emph{lambda path} resulting in the change of the model structure:
+#'  \itemize{
+#'    \item{(\code{"none"}): all steps are returned (default)}
+#'    \item{(\code{"initial"}): return initial step of each subpath consisting of the same variables}
+#'    \item{(\code{"final"}): return final step of each subpath consisting of the same variables}
+#'  }
+#'
 #' @return the \code{list} with following fields:
 #'  \itemize{
 #'    \item{\code{steps}: a \code{data.frame} with columns:
@@ -132,7 +20,7 @@ glmnet.df.as.matrix <- function(df.x, use.and.remove.intercept = FALSE){
 #'        \item{\code{lambda}}
 #'        \item{\code{dev.ratio}}
 #'        \item{\code{df}}
-#'        \item{\code{deviance}}
+#'        \item{\code{dev}}
 #'      }
 #'    }
 #'    \item{\code{coeffs}: a \code{data.frame} with columns:
@@ -144,26 +32,46 @@ glmnet.df.as.matrix <- function(df.x, use.and.remove.intercept = FALSE){
 #'    }
 #'  }
 #' @export
-glmnet.process.output <- function(glmnet.res){
+glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, structural.filter.type = c("none", "initial", "final")){
+
   glmnet.out <- broom::tidy(glmnet.res)
+  glmnet.res.dev <- glmnet::deviance.glmnet(glmnet.res)
+
   glmnet.out.steps <- glmnet.out %>%
     dplyr::select(step, lambda, dev.ratio) %>%
     dplyr::distinct() %>%
-    dplyr::arrange(step) %>%
-    dplyr::mutate(
-      df = glmnet.res$df,
-      deviance = deviance(glmnet.res)
-    )
+    dplyr::arrange(step)
+
+  glmnet.out.steps$df <- glmnet.res$df
+  glmnet.out.steps$dev <- glmnet.res.dev
 
   glmnet.out.coeffs <- glmnet.out %>%
     dplyr::select(step, term, estimate)
+
+  if (nonzero.coeffs.only) {
+    glmnet.out.coeffs <- glmnet.out.coeffs %>%
+      dplyr::filter(estimate != 0)
+  }
+
+  if (structural.filter.type[1] != "none") {
+    coeff.mtx <- coef(glmnet.res)
+
+    changes.idx <- structural.changes.col.matrix(
+      mtx = coeff.mtx,
+      initial.substeps = ("initial" %in% structural.filter.type),
+      final.substeps = ("final" %in% structural.filter.type)
+    )
+    glmnet.out.steps <- glmnet.out.steps %>% dplyr::filter(step %in% changes.idx)
+    glmnet.out.coeffs <- glmnet.out.coeffs %>% dplyr::filter(step %in% changes.idx)
+
+  }
 
   list(
     steps = glmnet.out.steps,
     coeffs = glmnet.out.coeffs
   )
-
 }
+
 
 #' @export
 glmnet.path.inner <- function(df.xy, y.cols, ...){
@@ -180,7 +88,7 @@ glmnet.path.inner <- function(df.xy, y.cols, ...){
 
   glmnet.out <- glmnet.process.output(glmnet.res)
   coeff.mtx <- coef(glmnet.res)
-  crit.steps.idx <- structural.changes.col.matrix(coeff.mtx, strict = FALSE)
+  #crit.steps.idx <- structural.changes.col.matrix(coeff.mtx, strict = FALSE)
 
 
 }
@@ -277,14 +185,17 @@ tmp.glmnet.path <- function(model.data.xy){
 #' @param strict if \code{TRUE} only the points of the structural change will be returned
 #' @return \code{(numeric)} vector containing the steps with structural changes
 #' @export
-structural.changes.col.matrix <- function(mtx, strict = FALSE) {
+structural.changes.col.matrix <- function(mtx, initial.substeps = TRUE, final.substeps = TRUE) {
   if (ncol(mtx) == 1) {
     return(c(1))
   }
+
   # getting the inclusion/exclusion matrix
-  coeff.excl <- as.matrix(mtx == 0)
+  coeff.excl <- as.matrix(mtx == 0) ## TODO: be smarter
+
   # first coeff set - s0 - is always novel, we compare starting with s1
   coeff.excl.2 <- coeff.excl[, -1]
+
   # dimensions must match, we do remove the last column
   coeff.excl.3 <- coeff.excl[, -ncol(coeff.excl)]
 
@@ -292,24 +203,30 @@ structural.changes.col.matrix <- function(mtx, strict = FALSE) {
   coeff.excl.same.reduced <- apply(coeff.excl.same, 2, all)
   # coeff.excl.same.reduced[i] == TRUE <-> coeffs[i+1] == coeffs[i]
   # coeff.excl.same.reduced[i] == FALSE <-> coeffs[i+1] != coeffs[i]
-  #   that is, coeffs[i+1] are DIFFERENT   (*)
+  #   that is, coeffs[i+1] are DIFFERENT   (***)
+
   coeff.excl.diff.prv <- which(!coeff.excl.same.reduced)
   # all steps with novelties
 
-  # adding the s0, adding (+1) to account for the (*)
+  # adding the s0, adding (+1) to account for the (***)
   coeff.excl.diff <- c(1, 1 + coeff.excl.diff.prv)
-  if (!strict) {
-    #let's also add one before the structural change
-    #let's also include last one if not prev. included
-    coeff.excl.diff <- c(
-      coeff.excl.diff,
-      coeff.excl.diff.prv,
-      ncol(coeff.excl)
-    )
+  subpaths.initial.elems <- coeff.excl.diff
+  subpaths.final.elems <- c(coeff.excl.diff.prv, ncol(coeff.excl))
+
+  res <- c()
+
+  if (initial.substeps) {
+    res <- subpaths.initial.elems
   }
-  # removing duplicates, which might occur in (!strict) case
-  coeff.excl.diff.out <- sort(unique(coeff.excl.diff))
-  coeff.excl.diff.out
+  if (final.substeps) {
+    res <- c(res, subpaths.final.elems)
+  }
+  if (initial.substeps && final.substeps) {
+    # removing duplicates, which may occur
+    res <- sort(unique(res))
+  }
+
+  res
 }
 
 #' Extraction of critical points from Lasso path
@@ -327,7 +244,8 @@ inference.lasso.path.structural.changes <- function(model.full.lasso, strict = F
   coeff.mtx <- coef(model.full.lasso)
   changes.idx <- structural.changes.col.matrix(
     mtx = coeff.mtx,
-    strict = strict
+    initial.substeps = TRUE,
+    final.substeps = strict
     )
 
   lasso.struct.coeffs <- coeff.mtx[, changes.idx]

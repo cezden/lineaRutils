@@ -1,9 +1,9 @@
 Package: lineaRutils
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Utils for Linear Models
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
+Author: Cezary Dendek
+Maintainer: Cezary Dendek <cezary.dendek+lineaRutils@gmail.com>
 Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Depends:
