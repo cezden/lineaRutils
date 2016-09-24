@@ -54,7 +54,7 @@ glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, struc
   }
 
   if (structural.filter.type[1] != "none") {
-    coeff.mtx <- coef(glmnet.res)
+    coeff.mtx <- stats::coef(glmnet.res)
 
     changes.idx <- structural.changes.col.matrix(
       mtx = coeff.mtx,
@@ -139,7 +139,7 @@ inference.lasso.path.structural.changes <- function(model.full.lasso, strict = F
   # extracting pts of structural change of the model
   # by comparing inclusion/exclusion matrices
 
-  coeff.mtx <- coef(model.full.lasso)
+  coeff.mtx <- stats::coef(model.full.lasso)
   changes.idx <- structural.changes.col.matrix(
     mtx = coeff.mtx,
     initial.substeps = TRUE,
@@ -147,7 +147,7 @@ inference.lasso.path.structural.changes <- function(model.full.lasso, strict = F
     )
 
   lasso.struct.coeffs <- coeff.mtx[, changes.idx]
-  Deviance <- deviance(model.full.lasso)[changes.idx]
+  Deviance <- stats::deviance(model.full.lasso)[changes.idx]
   lasso.struct <- rbind(lasso.struct.coeffs, Deviance)
   lasso.struct
 }
