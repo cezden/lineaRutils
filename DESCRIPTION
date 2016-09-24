@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: Cezary Dendek
 Maintainer: Cezary Dendek <cezary.dendek+lineaRutils@gmail.com>
 Description: More about what it does (maybe more than one line)
-License: What license is it under?
+License: GPL (>= 3)
 Depends:
   broom,
   dplyr,
