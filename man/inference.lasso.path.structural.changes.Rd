@@ -7,7 +7,7 @@
 inference.lasso.path.structural.changes(model.full.lasso, strict = FALSE)
 }
 \arguments{
-\item{model.full.lasso}{the model fitted by glmnet::glmnet function}
+\item{model.full.lasso}{the model fitted by \code{\link[glmnet]{glmnet}} function}
 
 \item{strict}{if \code{TRUE} only the points of the structural change will be returned}
 }
