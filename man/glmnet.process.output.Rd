@@ -5,7 +5,7 @@
 \title{The glmnet model postprocessor}
 \usage{
 glmnet.process.output(glmnet.res, nonzero.coeffs.only = FALSE,
-  structural.filter.type = c("none", "initial", "final"))
+  structural.filter.type = c("none", "initial", "final"), pseudoAIC = FALSE)
 }
 \arguments{
 \item{glmnet.res}{the result of the \code{\link[glmnet]{glmnet}} function}
@@ -18,6 +18,9 @@ glmnet.process.output(glmnet.res, nonzero.coeffs.only = FALSE,
   \item{(\code{"initial"}): return initial step of each subpath consisting of the same variables}
   \item{(\code{"final"}): return final step of each subpath consisting of the same variables}
 }}
+
+\item{pseudoAIC}{\code{(logical)} should AIC be calculated for each model;
+Remark: the value being calculated is \code{2*df -2*loglike + 2*loglike(NULL)}, where \code{df} is an approximation of df returned by glmnet}
 }
 \value{
 the \code{list} with following fields:
@@ -29,6 +32,7 @@ the \code{list} with following fields:
        \item{\code{dev.ratio}}
        \item{\code{df}}
        \item{\code{dev}}
+       \item{(optionally) \code{pseudoAIC}}
      }
    }
    \item{\code{coeffs}: a \code{data.frame} with columns:

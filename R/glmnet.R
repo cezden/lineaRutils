@@ -11,6 +11,8 @@
 #'    \item{(\code{"initial"}): return initial step of each subpath consisting of the same variables}
 #'    \item{(\code{"final"}): return final step of each subpath consisting of the same variables}
 #'  }
+#' @param pseudoAIC \code{(logical)} should AIC be calculated for each model;
+#'   Remark: the value being calculated is \code{2*df -2*loglike + 2*loglike(NULL)}, where \code{df} is an approximation of df returned by glmnet
 #'
 #' @return the \code{list} with following fields:
 #'  \itemize{
@@ -21,6 +23,7 @@
 #'        \item{\code{dev.ratio}}
 #'        \item{\code{df}}
 #'        \item{\code{dev}}
+#'        \item{(optionally) \code{pseudoAIC}}
 #'      }
 #'    }
 #'    \item{\code{coeffs}: a \code{data.frame} with columns:
@@ -32,7 +35,7 @@
 #'    }
 #'  }
 #' @export
-glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, structural.filter.type = c("none", "initial", "final")){
+glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, structural.filter.type = c("none", "initial", "final"), pseudoAIC = FALSE){
 
   glmnet.out <- broom::tidy(glmnet.res)
   glmnet.res.dev <- glmnet::deviance.glmnet(glmnet.res)
@@ -44,6 +47,22 @@ glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, struc
 
   glmnet.out.steps$df <- glmnet.res$df
   glmnet.out.steps$dev <- glmnet.res.dev
+  if (pseudoAIC) {
+    null.deviance <- glmnet.res$nulldev
+    # dev == 2*(loglike_sat - loglike)
+    # null.deviance = 2*(loglike_sat - loglike(NULL model)
+    # a "NULL model", is a model with icept only (or "empty model" - coxph)
+    # AIC = 2*no.params - 2*ln(Like)
+    # dev - null.deviance ==
+    #   == 2*(loglike_sat - loglike) - 2*(loglike_sat - loglike(NULL) ==
+    #   == -2*loglike + 2*loglike(NULL)
+    # pseudoAIC = 2*df + (dev - null.deviance) ==
+    #   == 2*no.params -2*loglike + 2*loglike(NULL) == AIC + const
+    glmnet.out.steps <- glmnet.out.steps %>%
+      dplyr::mutate(
+        pseudoAIC = 2*df + (dev - null.deviance)
+        )
+  }
 
   glmnet.out.coeffs <- glmnet.out %>%
     dplyr::select(step, term, estimate)
