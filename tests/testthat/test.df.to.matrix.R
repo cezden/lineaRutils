@@ -56,6 +56,21 @@ test_that("conversion with mixed factor and non-factor columns, factors last",{
 
 })
 
+test_that("conversion of [data.table] with mixed factor and non-factor columns, factors last",{
+  aqq <- prepare.aqq() %>% dplyr::select(Ozone, Solar.R, Wind, Temp, Month, Day)
+  aqq <- data.table::data.table(aqq)
+  #aqq$Month <- factor(airquality$Month, ordered = TRUE)
+  aqq.res <- df.as.matrix.dummy(aqq)
+  aqq.mat.trans <- aqq.res$mat.x.transform
+  aqq.mat <- aqq.res$mat.x
+
+  verify.conv.invariants(aqq, aqq.res)
+  #expect_equal(ncol(aqq) + nlevels(aqq$Month) + nlevels(aqq$Day) - 2, ncol(aqq.mat))
+  verfy.mat.invariants(aqq.res)
+
+})
+
+
 test_that("conversion with mixed factor and non-factor columns, factors first",{
   aqq <- prepare.aqq() %>% dplyr::select(Month, Day, Ozone, Solar.R, Wind, Temp)
   aqq.res <- df.as.matrix.dummy(aqq)
