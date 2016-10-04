@@ -171,3 +171,50 @@ inference.lasso.path.structural.changes <- function(model.full.lasso, strict = F
   lasso.struct
 }
 
+#' @export
+glmnet.predict.models <- function(glmnet.res, mat.x, mat.y, s, offset = NULL) {
+  pred.values <- predict(
+    glmnet.res,
+    type = "response",
+    newx = mat.x,
+    offset = offset,
+    s = s
+  )
+
+  if (is.matrix(mat.y)) {
+    mat.y.ok <- mat.y
+  } else {
+    mat.y.ok <- matrix(mat.y, ncol = 1)
+  }
+
+  bern.dev.1 <- t(log(pred.values)) %*% mat.y.ok
+  bern.dev.2 <- t(log(1 - pred.values)) %*% (1 - mat.y.ok)
+  model.llik <- (bern.dev.1 + bern.dev.2)
+
+  pred.coeffs <- predict(glmnet.res, type = "coefficients", s = s)
+
+  models.defs <- data.frame(s = s, loglik = model.llik[, 1])
+  models.defs$model.id <- 1:nrow(models.defs)
+
+  models.defs$df <- apply(pred.coeffs, 2, function(x) sum(x != 0))
+
+  models.coeffs <- broom::tidy(pred.coeffs) %>%
+    dplyr::rename(
+      term = row,
+      model.id = column,
+      estimate = value
+    )
+
+  models.defs2 <- models.defs %>%
+    dplyr::mutate(AIC = 2 * df - loglik)
+
+
+  list(
+    models = models.defs2,
+    coeffs = models.coeffs
+  )
+}
+
+
+
+
