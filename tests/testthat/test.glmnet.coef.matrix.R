@@ -83,4 +83,15 @@ test_that("alpha = 0.5",{
 
 })
 
+test_that("structural.changes.col.matrix", {
+  data(longley)
+  x <- as.matrix(longley[,1:6])
+  y <- as.matrix(longley[,7])
+  model <- glmnet::glmnet(x = x, y = y, family = "gaussian", alpha = 0.5, intercept = TRUE)
 
+  a.mat <- coef(model)
+  b.mat <- a.mat %>% as.matrix()
+  a.tst <- structural.changes.col.matrix(a.mat, initial.substeps = TRUE, final.substeps = TRUE)
+  b.tst <- structural.changes.col.matrix(b.mat, initial.substeps = TRUE, final.substeps = TRUE)
+  expect_equal(a.tst, b.tst)
+})

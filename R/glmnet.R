@@ -108,27 +108,26 @@ structural.changes.col.matrix <- function(mtx, initial.substeps = TRUE, final.su
   }
 
   # getting the inclusion/exclusion matrix
-  coeff.excl <- as.matrix(mtx == 0) ## TODO: be smarter
+  coeff.incl <- (mtx != 0)
 
   # first coeff set - s0 - is always novel, we compare starting with s1
-  coeff.excl.2 <- coeff.excl[, -1]
+  coeff.incl.2 <- coeff.incl[, -1]
 
   # dimensions must match, we do remove the last column
-  coeff.excl.3 <- coeff.excl[, -ncol(coeff.excl)]
+  coeff.incl.3 <- coeff.incl[, -ncol(coeff.incl)]
 
-  coeff.excl.same <- (coeff.excl.2 == coeff.excl.3)
-  coeff.excl.same.reduced <- apply(coeff.excl.same, 2, all)
-  # coeff.excl.same.reduced[i] == TRUE <-> coeffs[i+1] == coeffs[i]
-  # coeff.excl.same.reduced[i] == FALSE <-> coeffs[i+1] != coeffs[i]
+  coeff.incl.diff <- (coeff.incl.2 != coeff.incl.3)
+  coeff.incl.diff.reduced <- apply(coeff.incl.diff, 2, any)
+  # coeff.incl.diff.reduced[i] == FALSE <-> coeffs[i+1] == coeffs[i]
+  # coeff.incl.diff.reduced[i] == TRUE <-> coeffs[i+1] != coeffs[i]
   #   that is, coeffs[i+1] are DIFFERENT   (***)
 
-  coeff.excl.diff.prv <- which(!coeff.excl.same.reduced)
+  coeff.incl.diff.prv <- which(coeff.incl.diff.reduced)
   # all steps with novelties
 
   # adding the s0, adding (+1) to account for the (***)
-  coeff.excl.diff <- c(1, 1 + coeff.excl.diff.prv)
-  subpaths.initial.elems <- coeff.excl.diff
-  subpaths.final.elems <- c(coeff.excl.diff.prv, ncol(coeff.excl))
+  subpaths.initial.elems <- c(1, 1 + coeff.incl.diff.prv)
+  subpaths.final.elems <- c(coeff.incl.diff.prv, ncol(coeff.incl))
 
   res <- c()
 
@@ -172,26 +171,39 @@ inference.lasso.path.structural.changes <- function(model.full.lasso, strict = F
 }
 
 #' @export
-glmnet.predict.models <- function(glmnet.res, mat.x, mat.y, s, offset = NULL) {
+glmnet.predict.models <- function(glmnet.res, x, y, s, offset = NULL, exact = FALSE, ...) {
+
+  # since the update() of the glmnet not always works, let's expect it won't and do the job ;
+  # from the glmnet package:
+  if (exact && (!is.null(s))) {
+    which.s.computed <- match(s, glmnet.res$lambda, FALSE)
+    if (!all(which.s.computed > 0)) {
+      lambda <- unique(rev(sort(c(s, glmnet.res$lambda))))
+      glmnet.res <- glmnet::glmnet(x = x, y = y, lambda = lambda, offset = offset, ...)
+      # now all predict should work!
+    }
+  }
+
   pred.values <- predict(
     glmnet.res,
     type = "response",
-    newx = mat.x,
+    newx = x,
     offset = offset,
+    exact = exact,
     s = s
   )
 
-  if (is.matrix(mat.y)) {
-    mat.y.ok <- mat.y
+  if (is.matrix(y)) {
+    mat.y.ok <- y
   } else {
-    mat.y.ok <- matrix(mat.y, ncol = 1)
+    mat.y.ok <- matrix(y, ncol = 1)
   }
 
   bern.dev.1 <- t(log(pred.values)) %*% mat.y.ok
   bern.dev.2 <- t(log(1 - pred.values)) %*% (1 - mat.y.ok)
   model.llik <- (bern.dev.1 + bern.dev.2)
 
-  pred.coeffs <- predict(glmnet.res, type = "coefficients", s = s)
+  pred.coeffs <- predict(glmnet.res, type = "coefficients", s = s, exact = exact)
 
   models.defs <- data.frame(s = s, loglik = model.llik[, 1])
   models.defs$model.id <- 1:nrow(models.defs)
