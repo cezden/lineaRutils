@@ -37,16 +37,17 @@
 #' @export
 glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, structural.filter.type = c("none", "initial", "final"), pseudoAIC = FALSE){
 
-  glmnet.out <- broom::tidy(glmnet.res)
-  glmnet.res.dev <- glmnet::deviance.glmnet(glmnet.res)
+  glmnet.out.prc <- if (inherits(glmnet.res, "multnet") || !nonzero.coeffs.only) {
+    glmnet.process.output.reference(glmnet.res, nonzero.coeffs.only)
+  } else {
+    glmnet.process.output.nonzero(glmnet.res)
+  }
 
-  glmnet.out.steps <- glmnet.out %>%
-    dplyr::select(step, lambda, dev.ratio) %>%
-    dplyr::distinct() %>%
-    dplyr::arrange(step)
+  glmnet.out.steps <- glmnet.out.prc$steps
 
   glmnet.out.steps$df <- glmnet.res$df
-  glmnet.out.steps$dev <- glmnet.res.dev
+  glmnet.out.steps$dev <- glmnet::deviance.glmnet(glmnet.res)
+
   if (pseudoAIC) {
     null.deviance <- glmnet.res$nulldev
     # dev == 2*(loglike_sat - loglike)
@@ -64,19 +65,11 @@ glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, struc
         )
   }
 
-  glmnet.out.coeffs <- glmnet.out %>%
-    dplyr::select(step, term, estimate)
-
-  if (nonzero.coeffs.only) {
-    glmnet.out.coeffs <- glmnet.out.coeffs %>%
-      dplyr::filter(estimate != 0)
-  }
+  glmnet.out.coeffs <- glmnet.out.prc$coeffs
 
   if (structural.filter.type[1] != "none") {
-    coeff.mtx <- stats::coef(glmnet.res)
-
     changes.idx <- structural.changes.col.matrix(
-      mtx = coeff.mtx,
+      mtx = stats::coef(glmnet.res),
       initial.substeps = ("initial" %in% structural.filter.type),
       final.substeps = ("final" %in% structural.filter.type)
     )
@@ -88,6 +81,58 @@ glmnet.process.output <- function(glmnet.res, nonzero.coeffs.only = FALSE, struc
   list(
     steps = glmnet.out.steps,
     coeffs = glmnet.out.coeffs
+  )
+}
+
+glmnet.process.output.reference <- function(glmnet.res, nonzero.coeffs.only){
+  glmnet.out <- broom::tidy(glmnet.res)
+
+  glmnet.out.steps <- glmnet.out %>%
+    dplyr::select(step, lambda, dev.ratio) %>%
+    dplyr::distinct() %>%
+    dplyr::arrange(step)
+
+  if (inherits(glmnet.res, "multnet")) {
+    glmnet.out.coeffs <- glmnet.out %>%
+      dplyr::select(step, class, term, estimate)
+  } else {
+    glmnet.out.coeffs <- glmnet.out %>%
+      dplyr::select(step, term, estimate)
+  }
+
+  if (nonzero.coeffs.only) {
+    glmnet.out.coeffs <- glmnet.out.coeffs %>%
+      dplyr::filter(estimate != 0)
+  }
+
+  list(
+    steps = glmnet.out.steps,
+    coeffs = glmnet.out.coeffs
+  )
+}
+
+glmnet.process.output.nonzero <- function(glmnet.res) {
+  beta <- stats::coef(glmnet.res)
+  # coeff names
+  beta.coeffs <- rownames(beta)
+  # summary for non-empty elems
+  beta.s <- Matrix::summary(beta)
+  # coefficients descriptor
+  model.coeffs <- data.frame(
+    step = beta.s$j,
+    term = beta.coeffs[beta.s$i],
+    estimate = beta.s$x,
+    stringsAsFactors = FALSE
+  )
+  model.steps <- data.frame(
+    step = 1:glmnet.res$dim[2],
+    lambda = glmnet.res$lambda,
+    dev.ratio = glmnet.res$dev.ratio
+  )
+
+  list(
+    steps = model.steps,
+    coeffs = model.coeffs
   )
 }
 
