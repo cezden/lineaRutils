@@ -1,3 +1,5 @@
+#' Data frame factors description
+#' @param df (\code{data.frame}) to be described
 #' @export
 df.describe.factors <- function(df){
   df.names <- names(df)
