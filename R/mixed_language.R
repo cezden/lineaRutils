@@ -5,13 +5,14 @@ verbose_print <- function(x, verbose = FALSE){
 }
 
 
-#' Formula information
+#' MixLang formula information
 #' @param frm R formula object
+#' @param verbose should the function be verbose
 #' @export
-parser_parse_formula <- function(frm, verbose = FALSE){
+mixl_parse_formula <- function(frm, verbose = FALSE){
   frm.vars <- all.vars(frm)
   if ("." %in% frm.vars) {
-    stop("BAD")
+    stop("Dot ('.') in formula")
   }
   verbose_print(frm.vars, verbose)
   frm.terms <- terms.formula(frm)
@@ -34,13 +35,13 @@ parser_parse_formula <- function(frm, verbose = FALSE){
 
 
 #' @export
-the_model_fit_parse_specification_formula <- function(model.description){
+mixl_parse_specification_formula <- function(model.description){
 
   formula.LHS <- "cbind(successes, failures) ~"
   formula.RHS <- paste(model.description$components, collapse = " + ")
   formula.str <- paste(formula.LHS, formula.RHS)
   formula.obj <- as.formula(formula.str)
-  formula.prop <- parser_parse_formula(formula.obj)
+  formula.prop <- mixl_parse_formula(formula.obj)
 
   elems.1 <- list(
     formula.str.LHS = formula.LHS,
@@ -59,7 +60,7 @@ the_model_fit_parse_specification_formula <- function(model.description){
 #'
 #' @param model.description a model-level list with single model
 #' @export
-the_model_fit_parse_specification <- function(model.description.named){
+mixl_parse_specification <- function(model.description.named){
 
   model.name <- names(model.description.named)
   assertthat::are_equal(length(model.name), 1)
@@ -111,7 +112,7 @@ the_model_fit_parse_specification <- function(model.description.named){
 
   vret <- list()
 
-  vret$preformula <- the_model_fit_parse_specification_formula(model.description = model.def)
+  vret$preformula <- mixl_parse_specification_formula(model.description = model.def)
   #vret$
 
 
@@ -119,7 +120,7 @@ the_model_fit_parse_specification <- function(model.description.named){
 }
 
 #' @export
-the_model_specification_preparse_single <- function(model.description.named){
+mixl_specification_preparse_single <- function(model.description.named){
   model.name <- names(model.description.named)
   assertthat::are_equal(length(model.name), 1)
   model.def <- model.description.named[[model.name]]
@@ -148,11 +149,11 @@ the_model_specification_preparse_single <- function(model.description.named){
 
 
 #' @export
-the_model_specification_preparse <- function(raw_spec){
+mixl_specification_preparse <- function(raw_spec){
   ret <- lapply(
     names(raw_spec),
     function(model.name){
-      the_model_specification_preparse_single(raw_spec[model.name])
+      mixl_specification_preparse_single(raw_spec[model.name])
     }) %>%
     dplyr::bind_rows()
   bad <- ret %>%
@@ -169,8 +170,8 @@ the_model_specification_preparse <- function(raw_spec){
 
 
 #' @export
-the_model_specification_resolve_inner <- function(raw_spec){
-  spec.df <- the_model_specification_preparse(raw_spec) %>%
+mixl_specification_resolve_inner <- function(raw_spec){
+  spec.df <- mixl_specification_preparse(raw_spec) %>%
     dplyr::mutate(
       model.id = 1:n()
     )
@@ -203,13 +204,9 @@ the_model_specification_resolve_inner <- function(raw_spec){
       stop("BAD")
     }
 
-    now.closeable <-
+    #now.closeable <-
 
     break
-  }
-
-  for (i in 1:(nrow(spec.df.open) + 1)) {
-
   }
 
 }
@@ -217,21 +214,21 @@ the_model_specification_resolve_inner <- function(raw_spec){
 
 
 #' @export
-the_model_fit_read_specification <- function(fpath = NA){
+parser_read_specification <- function(fpath){
   if (is.na(fpath)) {
-    fpath <- system.file("extdata", "model_defs_basic.yml", package = "FunneleR")
-    fpath <- system.file("extdata", "model_defs_ext1.yml", package = "FunneleR")
+    fpath <- system.file("extdata", "model_defs_basic.yml", package = "lineaRutils")
+    fpath <- system.file("extdata", "model_defs_ext1.yml", package = "lineaRutils")
   }
 
   file.spec <- yaml::read_yaml(file = fpath, fileEncoding = "UTF-8")
 
   raw_spec <- file.spec
 
-  the_model_specification_preparse(file.spec)
+  mixl_specification_preparse(file.spec)
 
   names(file.spec)
 
-  file.spec.tmp <- "model.simple0"
+  file.spec.tmp <- "model0"
 
   names(file.spec[file.spec.tmp])
 
@@ -244,30 +241,30 @@ the_model_fit_read_specification <- function(fpath = NA){
 
 
 
-  the_model_fit_parse_specification_formula(file.spec[[file.spec.tmp]])
+  mixl_parse_specification_formula(file.spec[[file.spec.tmp]])
 
-  form.spec <- the_model_fit_parse_specification_formula(file.spec[[file.spec.tmp]])
+  form.spec <- mixl_parse_specification_formula(file.spec[[file.spec.tmp]])
 
 
 
 
   frm.terms <- terms.formula(formula.obj)
 
-  parser_parse_formula(formula.obj)
+  mixl_parse_formula(formula.obj)
 
-  parser_parse_formula(as.formula("."))
-  parser_parse_formula(as.formula("a ~ ."))
-  parser_parse_formula(as.formula("a ~ b"))
-  parser_parse_formula(as.formula("a ~ b"), verbose = TRUE)
-  parser_parse_formula(as.formula("a ~ (1 | b)"))
-  parser_parse_formula(as.formula("a ~ (1 | b) + 0"))
-  parser_parse_formula(as.formula("I(log(a)) ~ (1 | b) + 0"))
-  parser_parse_formula(as.formula("a ~ (1 | b) + (1 | c) + (1 | d) "))
-  parser_parse_formula(as.formula("a ~ (1 | b) + (1 | c) + (1 | d) + (1 | d)"))
-  parser_parse_formula(as.formula("a ~ (1 | b:c) + 0"))
-  parser_parse_formula(as.formula("a ~ (1 | b/c) + 0"))
-  parser_parse_formula(as.formula("a ~ (b/c) + 0"))
-  parser_parse_formula(as.formula("cbind(a,b) ~ (1 | c) + (1 | d)"))
+  mixl_parse_formula(as.formula("."))
+  mixl_parse_formula(as.formula("a ~ ."))
+  mixl_parse_formula(as.formula("a ~ b"))
+  mixl_parse_formula(as.formula("a ~ b"), verbose = TRUE)
+  mixl_parse_formula(as.formula("a ~ (1 | b)"))
+  mixl_parse_formula(as.formula("a ~ (1 | b) + 0"))
+  mixl_parse_formula(as.formula("I(log(a)) ~ (1 | b) + 0"))
+  mixl_parse_formula(as.formula("a ~ (1 | b) + (1 | c) + (1 | d) "))
+  mixl_parse_formula(as.formula("a ~ (1 | b) + (1 | c) + (1 | d) + (1 | d)"))
+  mixl_parse_formula(as.formula("a ~ (1 | b:c) + 0"))
+  mixl_parse_formula(as.formula("a ~ (1 | b/c) + 0"))
+  mixl_parse_formula(as.formula("a ~ (b/c) + 0"))
+  mixl_parse_formula(as.formula("cbind(a,b) ~ (1 | c) + (1 | d)"))
 
 
   all.vars(formula.obj)
@@ -275,7 +272,7 @@ the_model_fit_read_specification <- function(fpath = NA){
 
 
 
-  frm <- as.formula(the_model_fit_parse_specification(file.spec[[1]]))
+  frm <- as.formula(mixl_parse_specification(file.spec[[1]]))
 
   str(frm)
 

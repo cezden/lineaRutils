@@ -20,4 +20,3 @@ Function extracts the steps of the LASSO path resulting in the structural change
 the model coefficients matrix (adding/dropping coefficient)
 as well as the preceeding ones
 }
-

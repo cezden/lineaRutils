@@ -12,6 +12,7 @@ Depends:
   ggplot2,
   glmnet,
   lme4,
+  merTools,
   Matrix,
   stringi,
   tidyr,
