@@ -11,8 +11,10 @@ Depends:
   dplyr,
   ggplot2,
   glmnet,
+  lme4,
   Matrix,
   stringi,
-  tidyr
+  tidyr,
+  yaml
 LazyData: TRUE
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

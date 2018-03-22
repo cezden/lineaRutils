@@ -14,4 +14,3 @@ df.as.matrix.dummy.nonfactor(df.x, desc.basic)
 \description{
 Non-factorial data.frame to matrix
 }
-

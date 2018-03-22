@@ -14,4 +14,3 @@ df.as.matrix.dummy.withfactor(df.x, desc.basic)
 \description{
 data.frame to matrix
 }
-

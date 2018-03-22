@@ -12,4 +12,3 @@ df.describe.factors(df)
 \description{
 Data frame factors description
 }
-

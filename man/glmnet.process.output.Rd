@@ -48,4 +48,3 @@ the \code{list} with following fields:
 The function is based on the results returned by \code{\link[broom]{glmnet_tidiers}},
 with an optional application of results filtering using the \code{\link{structural.changes.col.matrix}} function.
 }
-

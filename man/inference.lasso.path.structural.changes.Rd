@@ -15,4 +15,3 @@ inference.lasso.path.structural.changes(model.full.lasso, strict = FALSE)
 Function extracts the points of the structure change (adding/dropping coefficient)
 as well as the preceeding ones, along with their deviance
 }
-

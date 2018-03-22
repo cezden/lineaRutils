@@ -9,4 +9,3 @@ glmnet_plot_glmnet(x, xvar = c("norm", "lambda", "dev"), label = FALSE, ...)
 \description{
 glmnet::plot.glmnet
 }
-

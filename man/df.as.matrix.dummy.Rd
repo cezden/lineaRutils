@@ -9,4 +9,3 @@ df.as.matrix.dummy(df.x)
 \description{
 Data frame to matrix
 }
-

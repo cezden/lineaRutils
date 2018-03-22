@@ -9,4 +9,3 @@ glmnet_ggplot_prepare(model.lasso)
 \description{
 Prepare the data for ggplot of glmnet
 }
-

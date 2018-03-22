@@ -16,4 +16,3 @@ broom_tidy_survreg(x, conf.level = 0.95, ...)
 \description{
 Bugfixed version of \link[broom]{tidy.survreg}
 }
-
