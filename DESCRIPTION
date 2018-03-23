@@ -9,6 +9,7 @@ License: GPL (>= 3)
 Depends:
   broom,
   dplyr,
+  formula.tools,
   ggplot2,
   glmnet,
   lme4,
