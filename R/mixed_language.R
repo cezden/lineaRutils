@@ -18,6 +18,16 @@ verbose_print <- function(x, title = NULL, verbose = FALSE){
   )
 }
 
+error_print_and_sig <- function(error.msg, x = NULL, title = NULL){
+  if (is.null(title)) {
+    title <- error.msg
+  }
+  if (!is.null(x)) {
+    verbose_print(x = x, title = title, verbose = TRUE)
+  }
+  stop(error.msg)
+}
+
 
 mixl_parse_formula_internal <- function(frm){
   frm.vars <- all.vars(frm)
@@ -196,6 +206,39 @@ mixl_specification_preparse_single <- function(model.description.named){
   )
 }
 
+mixl_specification_preparse_validate <- function(model.spec.df) {
+  bad <- model.spec.df %>%
+    dplyr::count(model.name) %>%
+    dplyr::filter(n > 1)
+  if (nrow(bad) > 0) {
+    error_print_and_sig("Duplicated model names", bad)
+  }
+
+  bad <- model.spec.df %>%
+    dplyr::filter(model.name == extends.name)
+  if (nrow(bad) > 0) {
+    error_print_and_sig("Model(s) extends itself", bad)
+  }
+
+  extensions.df <- model.spec.df %>%
+    dplyr::filter(is.extension) %>%
+    dplyr::left_join(
+      model.spec.df %>%
+        dplyr::mutate(has.definition = TRUE) %>%
+        dplyr::select(has.definition, extends.name = model.name),
+      by = "extends.name"
+    ) %>%
+    dplyr::mutate(
+      has.definition = ifelse(is.na(has.definition), FALSE, has.definition)
+    )
+
+  bad <- extensions.df %>%
+    dplyr::filter(!has.definition)
+  if (nrow(bad) > 0) {
+    error_print_and_sig("Model extends unknown model", bad)
+  }
+
+}
 
 #' @export
 mixl_specification_preparse <- function(raw_spec){
@@ -205,13 +248,8 @@ mixl_specification_preparse <- function(raw_spec){
       mixl_specification_preparse_single(raw_spec[model.name])
     }) %>%
     dplyr::bind_rows()
-  bad <- ret %>%
-    dplyr::count(model.name) %>%
-    dplyr::filter(n > 1)
-  if (nrow(bad) > 0) {
-    print(bad)
-    stop("Duplicated model names")
-  }
+
+  mixl_specification_preparse_validate(model.spec.df = ret)
 
   ret
 }
@@ -219,7 +257,7 @@ mixl_specification_preparse <- function(raw_spec){
 
 
 #' @export
-mixl_specification_resolve_inner <- function(raw_spec){
+mixl_specification_resolve_inner <- function(raw_spec, verbose = FALSE){
   spec.df <- mixl_specification_preparse(raw_spec) %>%
     dplyr::mutate(
       model.id = 1:n()
@@ -230,8 +268,9 @@ mixl_specification_resolve_inner <- function(raw_spec){
   spec.df.status <- spec.df %>%
     dplyr::mutate(
       is.closed = !is.extension,
-      closed.step = 1
+      closed.step = ifelse(is.closed, current.step, -1)
     )
+  verbose_print(spec.df.status, title = "Initial status table", verbose = verbose)
   n.df <- nrow(spec.df)
   n.df.closed <- sum(spec.df.status$is.closed)
 
@@ -243,20 +282,40 @@ mixl_specification_resolve_inner <- function(raw_spec){
   }
 
   for (it in 1:(n.df - n.df.closed)) {
-    prev.n.df.closed <- n.df.closed
     current.step <- current.step + 1
 
-    now.closed.idx <- spec.df.status$is.closed
-    now.closed.model.names <- spec.df.status$model.name[now.closed.idx]
-    n.now.closed <- length(now.closed.model.names)
-    if (prev.n.df.closed == n.now.closed) {
-      stop("BAD")
+    # continuation conditions
+    if (all(spec.df.status$is.closed)) {
+      break
     }
 
-    #now.closeable <-
+    now.closed.model.names <- (spec.df.status %>%
+      dplyr::filter(is.closed))$model.name
 
-    break
-  }
+    spec.df.status <- spec.df.status %>%
+      dplyr::mutate(
+        now.closeable = !is.closed & (extends.name %in% now.closed.model.names),
+        is.closed = ifelse(now.closeable, TRUE, is.closed),
+        closed.step = ifelse(now.closeable, current.step, closed.step)
+      )
+    verbose_print(
+      spec.df.status,
+      title = paste("Status table during step", current.step),
+      verbose = verbose)
+
+    if (!any(spec.df.status$now.closeable)) {
+      stop("BAD: empty or cycle")
+    }
+  } #for
+
+  spec.df.status %>%
+    dplyr::rename(
+      parsing.step = closed.step
+    ) %>%
+    dplyr::select(
+      -is.closed, -now.closeable
+    ) %>%
+    dplyr::arrange(parsing.step)
 
 }
 
@@ -265,8 +324,9 @@ mixl_specification_resolve_inner <- function(raw_spec){
 #' @export
 parser_read_specification <- function(fpath){
   if (is.na(fpath)) {
-    fpath <- system.file("extdata", "model_defs_basic.yml", package = "lineaRutils")
-    fpath <- system.file("extdata", "model_defs_ext1.yml", package = "lineaRutils")
+    fname <- "model_defs_basic.yml"
+    fname <- "model_defs_ext1.yml"
+    fpath <- paste0("/home/cde/R/x86_64-pc-linux-gnu-library/3.4/FunneleR/extdata/", fname)
   }
 
   file.spec <- yaml::read_yaml(file = fpath, fileEncoding = "UTF-8")
@@ -274,6 +334,7 @@ parser_read_specification <- function(fpath){
   raw_spec <- file.spec
 
   mixl_specification_preparse(file.spec)
+  mixl_specification_resolve_inner(file.spec, verbose = FALSE)
 
   names(file.spec)
 
