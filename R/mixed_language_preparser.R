@@ -111,8 +111,10 @@ mixl_specification_resolve_inner_preparse <- function(raw_spec, verbose = FALSE)
       break
     }
 
-    now.closed.model.names <- (spec.df.status %>%
-                                 dplyr::filter(is.closed))$model.name
+    now.closed.model.names <- (
+      spec.df.status %>%
+        dplyr::filter(is.closed)
+      )$model.name
 
     spec.df.status <- spec.df.status %>%
       dplyr::mutate(

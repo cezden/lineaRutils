@@ -1,3 +1,17 @@
+#' @export
+mixl_language_specification <- function() {
+  desc.elems.spec.strs <- c(
+    "element.name,is.required.instance,is.required.abstract,scope.dsl,extends.strategy",
+    "extends,FALSE,FALSE,TRUE,child_only",
+    "virtual,FALSE,FALSE,TRUE,child_only",
+    "components,TRUE,FALSE,TRUE,set_sum",
+    "response,TRUE,TRUE,TRUE,child_parent",
+    "family,TRUE,TRUE,FALSE,child_parent"
+  )
+
+  readr::read_csv(paste(desc.elems.spec.strs, collapse = "\n"))
+
+}
 
 
 #' Model description parser
@@ -13,21 +27,15 @@ mixl_parse_specification <- function(model.description.named){
 
   model.def.parts <- names(model.def)
 
-  desc.elems.spec.strs <- c(
-    "element.name,is.required,scope.dsl",
-    "extends,FALSE,TRUE",
-    "virtual,FALSE,TRUE",
-    "components,TRUE,TRUE",
-    "family,FALSE,FALSE"
-  )
-
-  desc.elems.spec.df <- readr::read_csv(paste(desc.elems.spec.strs, collapse = "\n"))
+  desc.elems.spec.df <- mixl_language_specification()
 
   observed.spec.df <- data.frame(
     element.name = model.def.parts,
     is.observed = TRUE,
     stringsAsFactors = FALSE
   )
+
+  is.virtual <- !is.null(model.def$virtual)
 
   spec.validation.df <- desc.elems.spec.df %>%
     dplyr::full_join(
@@ -36,7 +44,15 @@ mixl_parse_specification <- function(model.description.named){
     ) %>%
     dplyr::mutate(
       is.observed = ifelse(is.na(is.observed), FALSE, is.observed)
-    ) %>%
+    )
+
+  if (is.virtual) {
+    spec.validation.df$is.required <- spec.validation.df$is.required.abstract
+  } else {
+    spec.validation.df$is.required <- spec.validation.df$is.required.instance
+  }
+
+  spec.validation.df <- spec.validation.df %>%
     dplyr::mutate(
       is.fulfilled = !is.required | is.observed
     )
@@ -60,23 +76,44 @@ mixl_parse_specification <- function(model.description.named){
   vret <- list()
 
   vret$preformula <- mixl_parse_specification_formula(model.description = model.def)
+  vret$final.definition <- model.def
+  if (!is.null(vret$preformula)) {
+    vret$variables <- vret$preformula$formula.data.variables
+    vret$formula.str <- vret$preformula$formula.str
+  }
+
   #vret$
 
 
   vret
 }
 
-mixl_specification_resolve_inner_extends <- function(model.def, extension.def){
-  non.extendable.attributes <- c("virtual")
-  model.def.ext <- utils::modifyList(model.def, extension.def)
-  model.def.ext[non.extendable.attributes] <- model.def[non.extendable.attributes]
-  # we do however want to combine the "components" vector, not overwrite it
-  model.def.ext$components <- c(extension.def$components, model.def$components)
+mixl_specification_resolve_inner_extends <- function(model.def, parent.model){
+  lang.elems <- mixl_language_specification() %>%
+    dplyr::filter(
+      extends.strategy %in% c('set_sum', 'child_parent')
+    )
+  model.def.ext <- model.def
+  defined.elems <- names(model.def)
+  extension.def <- parent.model$final.definition
+  for (it in 1:nrow(lang.elems)) {
+    elem <- lang.elems[it, ]
+    elem.name <- elem$element.name
+    if (elem$extends.strategy == "set_sum") {
+      model.def.ext[[elem.name]] <- c(extension.def[[elem.name]], model.def[[elem.name]])
+    }
+    if (elem$extends.strategy == "child_parent") {
+      if (!(elem.name %in% defined.elems)) {
+        model.def.ext[[elem.name]] <- extension.def[[elem.name]]
+      }
+    }
+
+  }
 
   model.def.ext
 }
 
-mixl_specification_resolve_inner <- function(model.predescription.named, model.preparse.result, model.pool.raw, verbose = FALSE){
+mixl_specification_resolve_inner <- function(model.predescription.named, model.preparse.result, model.pool, verbose = FALSE){
   model.name <- names(model.predescription.named)
   assertthat::are_equal(length(model.name), 1)
 
@@ -84,8 +121,8 @@ mixl_specification_resolve_inner <- function(model.predescription.named, model.p
   model.def.named <- model.predescription.named
   if (model.preparse.result$is.extension) {
     ext.name <- model.preparse.result$extends.name
-    ext.def <- model.pool.raw[[ext.name]]
-    res.model <- mixl_specification_resolve_inner_extends(model.def = model.def, extension.def = ext.def)
+    ext.def <- model.pool[[ext.name]]
+    res.model <- mixl_specification_resolve_inner_extends(model.def = model.def, parent.model = ext.def)
     model.def.named <- list()
     model.def.named[[model.name]] <- res.model
 
@@ -109,7 +146,7 @@ mixl_specification_resolve <- function(raw_spec, verbose = FALSE){
     model.out <- mixl_specification_resolve_inner(
       model.predescription.named = model.predescription.named,
       model.preparse.result = model.preparse.result,
-      model.pool.raw = raw_spec,
+      model.pool = model.pool,
       verbose = verbose
     )
     model.pool[[model.name]] <- model.out
@@ -165,32 +202,6 @@ parser_read_specification <- function(fpath){
 
 
   mixl_parse_specification_formula(file.spec[[file.spec.tmp]])
-
-  form.spec <- mixl_parse_specification_formula(file.spec[[file.spec.tmp]])
-
-
-
-
-  frm.terms <- terms.formula(formula.obj)
-
-  mixl_parse_formula(formula.obj)
-
-  mixl_parse_formula(as.formula("."))
-  mixl_parse_formula(as.formula("a ~ ."))
-  mixl_parse_formula(as.formula("a ~ b"))
-  mixl_parse_formula(as.formula("a ~ b"), verbose = TRUE)
-  mixl_parse_formula(as.formula("a ~ (1 | b)"))
-  mixl_parse_formula(as.formula("a ~ (1 | b) + 0"))
-  mixl_parse_formula(as.formula("I(log(a)) ~ (1 | b) + 0"))
-  mixl_parse_formula(as.formula("a ~ (1 | b) + (1 | c) + (1 | d) "))
-  mixl_parse_formula(as.formula("a ~ (1 | b) + (1 | c) + (1 | d) + (1 | d)"))
-  mixl_parse_formula(as.formula("a ~ (1 | b:c) + 0"))
-  mixl_parse_formula(as.formula("a ~ (1 | b/c) + 0"))
-  mixl_parse_formula(as.formula("a ~ (b/c) + 0"))
-  mixl_parse_formula(as.formula("cbind(a,b) ~ (1 | c) + (1 | d)"))
-
-
-  all.vars(formula.obj)
 
 
 

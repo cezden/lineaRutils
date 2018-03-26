@@ -65,9 +65,16 @@ mixl_parse_formula <- function(frm, verbose = FALSE){
 #' @export
 mixl_parse_specification_formula <- function(model.description){
 
-  formula.LHS <- "cbind(successes, failures) ~"
-  formula.RHS <- paste(model.description$components, collapse = " + ")
-  formula.str <- paste(formula.LHS, formula.RHS)
+
+  formula.LHS <- model.description$response
+  formula.RHS.pre <- model.description$components
+
+  if (any(is.null(formula.LHS), is.null(formula.RHS.pre))) {
+    return(NULL)
+  }
+
+  formula.RHS <- paste(formula.RHS.pre, collapse = " + ")
+  formula.str <- paste(formula.LHS, "~", formula.RHS)
   formula.obj <- as.formula(formula.str)
   formula.prop <- mixl_parse_formula(formula.obj)
 
