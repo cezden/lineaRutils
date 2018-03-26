@@ -79,7 +79,7 @@ mixl_specification_preparse <- function(raw_spec){
 
 #' Extends-aware Model Parsing Order
 #' @export
-mixl_specification_resolve_inner <- function(raw_spec, verbose = FALSE){
+mixl_specification_resolve_inner_preparse <- function(raw_spec, verbose = FALSE){
   spec.df <- mixl_specification_preparse(raw_spec) %>%
     dplyr::mutate(
       model.id = 1:n()

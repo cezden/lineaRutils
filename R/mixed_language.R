@@ -51,7 +51,10 @@ mixl_parse_specification <- function(model.description.named){
   }
 
   if (!is.null(model.def$extends)) {
-    assertthat::assert_that(model.def$extends != model.name, paste("Model", model.name, "extends itself"))
+    good <- (model.def$extends != model.name[1])
+    if (!good) {
+      stop(paste("Model", model.name, "extends itself"))
+    }
   }
 
   vret <- list()
@@ -63,14 +66,58 @@ mixl_parse_specification <- function(model.description.named){
   vret
 }
 
+mixl_specification_resolve_inner_extends <- function(model.def, extension.def){
+  non.extendable.attributes <- c("virtual")
+  model.def.ext <- utils::modifyList(model.def, extension.def)
+  model.def.ext[non.extendable.attributes] <- model.def[non.extendable.attributes]
+  # we do however want to combine the "components" vector, not overwrite it
+  model.def.ext$components <- c(extension.def$components, model.def$components)
+
+  model.def.ext
+}
+
+mixl_specification_resolve_inner <- function(model.predescription.named, model.preparse.result, model.pool.raw, verbose = FALSE){
+  model.name <- names(model.predescription.named)
+  assertthat::are_equal(length(model.name), 1)
+
+  model.def <- model.predescription.named[[model.name]]
+  model.def.named <- model.predescription.named
+  if (model.preparse.result$is.extension) {
+    ext.name <- model.preparse.result$extends.name
+    ext.def <- model.pool.raw[[ext.name]]
+    res.model <- mixl_specification_resolve_inner_extends(model.def = model.def, extension.def = ext.def)
+    model.def.named <- list()
+    model.def.named[[model.name]] <- res.model
+
+  }
+  parsed.spec <- mixl_parse_specification(model.def.named)
+
+  parsed.spec
+
+}
+
+#' @export
 mixl_specification_resolve <- function(raw_spec, verbose = FALSE){
   model.pool <- list()
 
-  parse.order <- mixl_specification_resolve_inner(raw_spec = raw_spec, verbose = verbose)
+  parse.order <- mixl_specification_resolve_inner_preparse(raw_spec = raw_spec, verbose = verbose)
+  for (rowid in 1:nrow(parse.order)) {
+    model.preparse.result <- parse.order[rowid, ]
+    model.name <- model.preparse.result$model.name
+    model.predescription.named <- raw_spec[model.preparse.result$model.name]
+
+    model.out <- mixl_specification_resolve_inner(
+      model.predescription.named = model.predescription.named,
+      model.preparse.result = model.preparse.result,
+      model.pool.raw = raw_spec,
+      verbose = verbose
+    )
+    model.pool[[model.name]] <- model.out
+  }
 
   #mixl_parse_specification
 
-
+  model.pool
 }
 
 
@@ -88,7 +135,9 @@ parser_read_specification <- function(fpath){
   raw_spec <- file.spec
 
   mixl_specification_preparse(file.spec)
-  mixl_specification_resolve_inner(file.spec, verbose = FALSE)
+  mixl_specification_resolve_inner_preparse(file.spec, verbose = FALSE)
+
+  model.pool <- mixl_specification_resolve(raw_spec = file.spec, verbose = FALSE)
 
   names(file.spec)
 
@@ -102,6 +151,16 @@ parser_read_specification <- function(fpath){
     print("gfds")
   }
 
+
+  tmp.x <- list( A=list(p=runif(5)), B=list(q=runif(5)) )
+  tmp.y <- list( A=list(r=runif(5)), C=list(s=runif(5)) )
+
+  c(tmp.x, tmp.y)
+
+  tmp.z <- tmp.x
+  utils::modifyList(tmp.z, tmp.y)
+  tmp.z
+  tmp.y
 
 
 
