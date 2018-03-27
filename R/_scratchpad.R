@@ -360,3 +360,62 @@ tmp.glmnet.path <- function(model.data.xy){
 }
 
 
+
+tmptmp <- function(){
+  if (is.na(fpath)) {
+    fname <- "model_defs_basic.yml"
+    fname <- "model_defs_ext1.yml"
+    fpath <- paste0("/home/cde/R/x86_64-pc-linux-gnu-library/3.4/FunneleR/extdata/", fname)
+  }
+
+  file.spec <- yaml::read_yaml(file = fpath, fileEncoding = "UTF-8")
+
+  raw_spec <- file.spec
+
+  mixl_specification_preparse(file.spec)
+  mixl_specification_resolve_inner_preparse(file.spec, verbose = FALSE)
+
+  model.pool <- mixl_specification_resolve(raw_spec = file.spec, verbose = FALSE)
+
+  lapply(model.pool)
+
+  names(file.spec)
+
+  file.spec.tmp <- "model0"
+
+  names(file.spec[file.spec.tmp])
+
+  model.description <- file.spec[file.spec.tmp]
+  model.description.named <- file.spec[[file.spec.tmp]]
+  if (model.description.named[['virtual']]) {
+    print("gfds")
+  }
+
+
+  tmp.x <- list( A=list(p=runif(5)), B=list(q=runif(5)) )
+  tmp.y <- list( A=list(r=runif(5)), C=list(s=runif(5)) )
+
+  c(tmp.x, tmp.y)
+
+  tmp.z <- tmp.x
+  utils::modifyList(tmp.z, tmp.y)
+  tmp.z
+  tmp.y
+
+
+
+  mixl_parse_specification_formula(file.spec[[file.spec.tmp]])
+
+
+
+
+  frm <- as.formula(mixl_parse_specification(file.spec[[1]]))
+
+  str(frm)
+
+
+
+}
+
+
+
