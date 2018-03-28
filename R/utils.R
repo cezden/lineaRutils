@@ -27,3 +27,9 @@ error_print_and_sig <- function(error.msg, x = NULL, title = NULL){
   stop(error.msg)
 }
 
+
+nest_in_list <- function(field_name, value){
+  ret <- list()
+  ret[[field_name]] <- value
+  ret
+}

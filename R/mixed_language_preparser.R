@@ -31,6 +31,7 @@ mixl_specification_preparse_validate <- function(model.spec.df) {
   bad <- model.spec.df %>%
     dplyr::count(model.name) %>%
     dplyr::filter(n > 1)
+
   if (nrow(bad) > 0) {
     error_print_and_sig("Duplicated model names", bad)
   }
@@ -42,21 +43,25 @@ mixl_specification_preparse_validate <- function(model.spec.df) {
   }
 
   extensions.df <- model.spec.df %>%
-    dplyr::filter(is.extension) %>%
-    dplyr::left_join(
-      model.spec.df %>%
-        dplyr::mutate(has.definition = TRUE) %>%
-        dplyr::select(has.definition, extends.name = model.name),
-      by = "extends.name"
-    ) %>%
-    dplyr::mutate(
-      has.definition = ifelse(is.na(has.definition), FALSE, has.definition)
-    )
+    dplyr::filter(is.extension)
 
-  bad <- extensions.df %>%
-    dplyr::filter(!has.definition)
-  if (nrow(bad) > 0) {
-    error_print_and_sig("Model extends unknown model", bad)
+  if (nrow(extensions.df) > 0) {
+    extensions.df <- extensions.df %>%
+      dplyr::left_join(
+        model.spec.df %>%
+          dplyr::mutate(has.definition = TRUE) %>%
+          dplyr::select(has.definition, extends.name = model.name),
+        by = "extends.name"
+      ) %>%
+      dplyr::mutate(
+        has.definition = ifelse(is.na(has.definition), FALSE, has.definition)
+      )
+
+    bad <- extensions.df %>%
+      dplyr::filter(!has.definition)
+    if (nrow(bad) > 0) {
+      error_print_and_sig("Model extends unknown model", bad)
+    }
   }
 
 }
@@ -85,61 +90,10 @@ mixl_specification_resolve_inner_preparse <- function(raw_spec, verbose = FALSE)
       model.id = 1:n()
     )
 
-  current.step <- 1
-
-  spec.df.status <- spec.df %>%
-    dplyr::mutate(
-      is.closed = !is.extension,
-      closed.step = ifelse(is.closed, current.step, -1)
+  model_pool_resolve_parsing_order(
+    models.stage1.df = spec.df,
+    verbose = verbose
     )
-  verbose_print(spec.df.status, title = "Initial status table", verbose = verbose)
-  n.df <- nrow(spec.df)
-  n.df.closed <- sum(spec.df.status$is.closed)
-
-  if (n.df.closed == n.df) {
-    return(spec.df.status)
-  }
-  if (n.df.closed == 0) {
-    stop("BAD: empty or cycle")
-  }
-
-  for (it in 1:(n.df - n.df.closed)) {
-    current.step <- current.step + 1
-
-    # continuation conditions
-    if (all(spec.df.status$is.closed)) {
-      break
-    }
-
-    now.closed.model.names <- (
-      spec.df.status %>%
-        dplyr::filter(is.closed)
-      )$model.name
-
-    spec.df.status <- spec.df.status %>%
-      dplyr::mutate(
-        now.closeable = !is.closed & (extends.name %in% now.closed.model.names),
-        is.closed = ifelse(now.closeable, TRUE, is.closed),
-        closed.step = ifelse(now.closeable, current.step, closed.step)
-      )
-    verbose_print(
-      spec.df.status,
-      title = paste("Status table during step", current.step),
-      verbose = verbose)
-
-    if (!any(spec.df.status$now.closeable)) {
-      stop("BAD: empty or cycle")
-    }
-  } #for
-
-  spec.df.status %>%
-    dplyr::rename(
-      parsing.step = closed.step
-    ) %>%
-    dplyr::select(
-      -is.closed, -now.closeable
-    ) %>%
-    dplyr::arrange(parsing.step)
 
 }
 
