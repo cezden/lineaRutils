@@ -1,3 +1,6 @@
+#' MixL Model PreDescription
+#'
+#' @param model.raw.description.named \code{list(model.name = list(...))}
 #' @export
 model_description_pre <- function(model.raw.description.named){
 
@@ -37,6 +40,23 @@ get_model_name <- function(x, y, ...) {
 get_model_name.model_description_pre <- function(model.desc){
   model.desc$model.name
 }
+
+is_extension <- function(x, y, ...) {
+  UseMethod("is_extension")
+}
+
+is_extension.model_description_pre <- function(model.desc){
+  model.desc$obj.properties$is.extension
+}
+
+get_parent_name <- function(x, y, ...) {
+  UseMethod("get_parent_name")
+}
+
+get_parent_name.model_description_pre <- function(model.desc){
+  model.desc$obj.properties$extends.name
+}
+
 
 get_preparser_df <- function(x, y, ...) {
   UseMethod("get_preparser_df")
@@ -119,7 +139,7 @@ model_pool <- function(model.pool.preparsed, verbose = FALSE){
   )
 
 
-  class(ret) <- 'model_pool_preparsed'
+  class(ret) <- 'model_pool'
   ret
 }
 

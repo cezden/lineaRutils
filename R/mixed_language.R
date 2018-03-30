@@ -1,5 +1,4 @@
-#' @export
-mixl_language_specification <- function() {
+mixl_language_specification_recreate <- function() {
   desc.elems.spec.strs <- c(
     "element.name,is.required.instance,is.required.abstract,scope.dsl,extends.strategy",
     "extends,FALSE,FALSE,TRUE,child_only",
@@ -9,8 +8,13 @@ mixl_language_specification <- function() {
     "family,TRUE,TRUE,FALSE,child_parent"
   )
 
-  readr::read_csv(paste(desc.elems.spec.strs, collapse = "\n"))
+  mixl_language_specification <- readr::read_csv(paste(desc.elems.spec.strs, collapse = "\n"))
+  mixl_language_specification <- mixl_language_specification %>%
+    as.data.frame()
+  attr(mixl_language_specification, "spec") <- NULL
+  str(mixl_language_specification)
 
+  devtools::use_data(mixl_language_specification, internal = TRUE)
 }
 
 
@@ -27,7 +31,7 @@ mixl_parse_specification <- function(model.description.named){
 
   model.def.parts <- names(model.def)
 
-  desc.elems.spec.df <- mixl_language_specification()
+  desc.elems.spec.df <- mixl_language_specification
 
   observed.spec.df <- data.frame(
     element.name = model.def.parts,
@@ -89,7 +93,7 @@ mixl_parse_specification <- function(model.description.named){
 }
 
 mixl_specification_resolve_inner_extends <- function(model.def, parent.model){
-  lang.elems <- mixl_language_specification() %>%
+  lang.elems <- mixl_language_specification %>%
     dplyr::filter(
       extends.strategy %in% c('set_sum', 'child_parent')
     )

@@ -85,3 +85,11 @@ test_that("formula processing",{
   #mixl_parse_formula(as.formula("a ~ ."))
 
 })
+
+test_that("MixL language specification",{
+  lang.spec <- lineaRutils::mixl_language_specification
+  testthat::expect_setequal(
+    names(lang.spec),
+    c("element.name", "is.required.instance", "is.required.abstract", "scope.dsl", "extends.strategy")
+  )
+})
