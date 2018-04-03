@@ -88,10 +88,24 @@ get_model_name.model_description <- function(model.desc){
   model.desc$model.name
 }
 
+
 is_extension.model_description <- function(model.desc){
   model.desc$obj.properties$is.extension
 }
 
+
 get_parent_name.model_description <- function(model.desc){
   model.desc$obj.properties$extends.name
 }
+
+
+get_fit_params.model_description <- function(model.desc, model.fit.params.default = NULL){
+  params <- list(
+    family = model.desc$final.definition$family
+  )
+  utils::modifyList(
+    model.fit.params.default,
+    params
+  )
+}
+

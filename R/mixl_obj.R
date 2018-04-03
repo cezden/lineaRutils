@@ -134,6 +134,9 @@ get_model_names.model_pool_preparsed <- function(model.pool.pre){
   model.pool.pre$models.pre.df$model.name
 }
 
+get_fit_params <- function(x, y, ...) {
+  UseMethod("get_fit_params")
+}
 
 #' @export
 model_pool <- function(model.pool.preparsed, verbose = FALSE){

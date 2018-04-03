@@ -127,4 +127,26 @@ test_that("model_pool_parser 2 ",{
 
 })
 
+test_that("model_adapter_strategy ",{
+
+  model.path <- "./abcde"
+  fstra <- fitting_strategy(model_output_dir = model.path)
+  model_core_name <- "EFG"
+
+  fstra.testname <- get_filepath(fstra, model_core_name = model_core_name)
+
+  fprefix <- paste0(model.path, "/")
+  testthat::expect_true(
+    stringi::stri_startswith_fixed(str = fstra.testname, pattern = paste0(model.path, "/"))
+  )
+
+
+  fsuffix <- paste0(model_core_name, ".RData")
+  testthat::expect_true(
+    stringi::stri_endswith_fixed(str = fstra.testname, pattern = fsuffix)
+  )
+
+
+})
+
 

@@ -17,25 +17,34 @@ lme4_glmer_fit <- function(model.formula, model.data, model.params){
 }
 
 #' @export
-lme4_glmer_fit_set <- function(model.desc.set, model.data, verbose = FALSE){
+lme4_glmer_fit_set <- function(model.desc.set, model.data, model.fit.params.default, fitting.strategy = fitting_strategy(), verbose = FALSE){
 
-  models.cnt <- length(model.desc.set)
   models <- lapply(
-    names(model.desc.set),
+    get_model_names(model.desc.set),
     function(model.name){
-      model.desc <- model.desc.set[[model.name]]
+      a_model <- get_model(model.desc.set, model.name)
 
-      model.form <- model.desc
+      model.form <- get_formula_str(a_model)
       print(model.form)
+
+      model.params <- get_fit_params(a_model, model.fit.params.default = model.fit.params.default)
+
       model.out <- lme4_glmer_fit(
         model.formula = model.form,
-        model.data = model.data
+        model.data = model.data,
+        model.params = model.params
       )
-      save(model.out, file = paste0(model.name, ".RData"))
+
+      fpath <- get_filepath(fitting.strategy, model_core_name = model.name)
+      save(model.out, file = fpath)
       print(summary(model.out))
-      model.out
+
+      list(
+        model.name = model.name,
+        file.path = fpath
+      )
     })
-  names(models) <- names(model.formulas)
+
   models
 }
 
