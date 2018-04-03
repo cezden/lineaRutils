@@ -29,6 +29,13 @@ test_that("rstanarm 1",{
 
   model.fit2.sum <- summary(model.fit2, pars = "varying")
 
+  broom::glance(model.fit2)
+  param.types <- c("non-varying", "varying", "hierarchical", "auxiliary")
+  broom::tidy(model.fit2, intervals = TRUE, parameters = param.types[2])
+  broom::tidy(model.fit2, intervals = TRUE, parameters = param.types[3])
+
+  # https://github.com/mjskay/tidybayes/blob/master/vignettes/tidy-rstanarm.Rmd
+
   str(model.fit2.sum)
 
 
