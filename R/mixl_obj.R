@@ -122,9 +122,16 @@ get_parsing_order_df.model_pool_preparsed <- function(model.pool.pre) {
   model.pool.pre$models.pre.parse.order
 }
 
-
 get_model.model_pool_preparsed <- function(model.pool.pre, model.name){
   model.pool.pre$models.pre[[model.name]]
+}
+
+get_model_names <- function(x, y, ...) {
+  UseMethod("get_model_names")
+}
+
+get_model_names.model_pool_preparsed <- function(model.pool.pre){
+  model.pool.pre$models.pre.df$model.name
 }
 
 
@@ -133,10 +140,10 @@ model_pool <- function(model.pool.preparsed, verbose = FALSE){
   ret <- list()
   ret$raw.list <- raw.list
 
-  ret$models.stage2 <- model_pool_resolve(
-    parse.order.df = get_parsing_order_df(model.pool.preparsed),
-    models.stage1.spec = models.stage1
-  )
+  #ret$models.stage2 <- model_pool_resolve(
+  #  parse.order.df = get_parsing_order_df(model.pool.preparsed),
+  #  models.stage1.spec = models.stage1
+  #)
 
 
   class(ret) <- 'model_pool'

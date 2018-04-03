@@ -1,0 +1,6 @@
+model0:
+  response: cbind(A,B)
+  family: binomial
+  components:
+  - (1 | C)
+  - (1 | D)

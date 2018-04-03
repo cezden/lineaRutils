@@ -1,3 +1,4 @@
+library(yaml)
 context("MixL objects")
 
 preparser_df_invariants <- function(pre.df){
@@ -101,3 +102,29 @@ test_that("model_pool_parser",{
   testthat::expect_equal(test.desc$model0$model.name, "model0")
 
 })
+
+test_that("model_pool_parser 2 ",{
+
+  raw.data.named <- yaml::read_yaml(file = "./data/test1_pos.yml")
+
+  test.desc <- model_pool_preparsed(raw.data.named)
+
+  testthat::expect_is(test.desc, "model_pool_preparsed")
+  testthat::expect_equal(get_model_names(test.desc), c("model0"))
+
+  for (model.name in get_model_names(test.desc)) {
+    a_model <- get_model(test.desc, model.name = model.name)
+    testthat::expect_is(a_model, "model_description_pre")
+    preparser_df_invariants(get_preparser_df(a_model))
+    testthat::expect_equal(is_extension(a_model), FALSE)
+  }
+
+  #testthat::expect_equal(length(test.desc), 1)
+
+  #
+  #testthat::expect_is(test.desc$model0, "model_description_pre")
+  #testthat::expect_equal(test.desc$model0$model.name, "model0")
+
+})
+
+
