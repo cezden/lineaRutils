@@ -7,6 +7,9 @@ test_that("lme4",{
 })
 
 
+do_model_framing <- function()
+
+
 test_that("rstanarm 1",{
 
   test.model.data <- lme4::cbpp
@@ -26,6 +29,50 @@ test_that("rstanarm 1",{
     model.data = test.model.data,
     model.params = test.model.params
   )
+
+  tttmp <- lme4_glmer_formulator(
+    model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
+    model.data = lme4::cbpp,
+    model.params = list(family = "binomial")
+  )
+
+  tttmp$reTrms$theta
+
+
+  #https://rdrr.io/cran/lme4/man/mkReTrms.html
+
+  tttmp$reTrms$cnms
+  # a list of column names of the random effects according to the grouping factors
+  cnms.re <- lapply(
+    names(tttmp$reTrms$cnms),
+    function(mix.comp.name){
+      data.frame(
+        param_name = tttmp$reTrms$cnms[[mix.comp.name]],
+        group_factor = mix.comp.name,
+        stringsAsFactors = FALSE
+      )
+    }
+  ) %>% dplyr::bind_rows()
+
+
+  tttmp$reTrms$Ztlist
+
+
+
+  #install.packages(c("Rcpp", "Matrix", "RcppRoll", "RcppEigen", "RcppArmadillo", "RcppParallel"), Ncpus = 3)
+  #install.packages(c("RcppParallel"))
+
+  #install.packages(c("tidyverse"), Ncpus = 3)
+  #install.packages(c("devtools"), Ncpus = 3)
+  #install.packages(c("data.table", "feather"), Ncpus = 3)
+  #install.packages(c("BH", "bindrcpp", "", "", ""))
+  #install.packages(c("VGAM", "rstan", "lme4"), Ncpus = 3)
+  #install.packages(c("glmnet", "glmpath"), Ncpus = 3)
+  #install.packages(c("brms", "rstanarm", "arm", "blme", "coda", "coin", "conting", "broom","bridgesampling","BMS"), Ncpus = 3)
+  #install.packages(c("BayesGOF", "betareg", "diagis","flexmix","gdata", "Hmisc", "prophet"), Ncpus = 3)
+
+
+
 
   tttmp <- lme4::glFormula(cbind(incidence, size - incidence) ~ period + (1 | herd),
                      data = cbpp, family = binomial)
@@ -73,10 +120,10 @@ test_that("rstanarm 1",{
   rstanarm::ranef(model.fit2)
   rstanarm::fixef(model.fit2)
 
-  coef(model.fit2)
+  #coef(model.fit2)
   rstanarm::posterior_interval(model.fit2)
   rstanarm::se(model.fit2)
-  confint(model.fit2)
+  #confint(model.fit2)
   sigma(model.fit2)
 
   #str(rstanarm::prior_summary(model.fit2))
