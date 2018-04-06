@@ -38,6 +38,22 @@ test_that("rstanarm 1",{
     model.params = test.model.params
   )
 
+  class(model.fit2)
+  rstanarm::ngrps(model.fit2)
+  coef(model.fit2)
+  rstanarm::ranef(model.fit2)  %>% as.data.frame()
+  rstanarm::fixef(model.fit2)  %>% as.data.frame()
+  VarCorr(model.fit2) %>% as.data.frame()
+  vcov(model.fit2) %>% as.data.frame()
+  plot(model.fit2)
+
+
+
+
+
+
+
+
   do_model_framing(
     model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
     model.data = lme4::cbpp,
@@ -59,7 +75,7 @@ test_that("rstanarm 1",{
       Reaction.dicho = Reaction<median(Reaction)
     )
 
-  tttmp <- lme4_glmer_formulator(
+  tttmp <- lme4_glmer_structure_spec(
     model.formula = "Reaction.dicho ~ Days + (Days | Subject)",
     model.data = sleepstudy.mod,
     model.params = list(family = "binomial")
@@ -67,13 +83,31 @@ test_that("rstanarm 1",{
 
   lme4_glmer_formulator_parser(tttmp)
 
-  tttmp <- lme4_glmer_fit(
+  test.model.params <- list(
+    family = "binomial",
+    chains = 4,
+    iter = 1000,
+    thin = 2,
+    open_progress = FALSE,
+    show_messages = FALSE
+  )
+
+  model.fit2 <- rstanarm_glmer_fit(
+    model.formula = "Reaction.dicho ~ Days + (Days | Subject)",
+    model.data = sleepstudy.mod,
+    model.params = test.model.params
+  )
+
+
+
+
+  tttmp <- lme4_glmer_structure_spec(
     model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
     model.data = lme4::cbpp,
     model.params = list(family = "binomial")
   )
 
-  tttmp <- lme4_glmer_fit(
+  tttmp <- lme4_glmer_structure_spec(
     model.formula = "Reaction.dicho ~ Days + (Days | Subject)",
     model.data = sleepstudy.mod,
     model.params = list(family = "binomial")
@@ -83,13 +117,101 @@ test_that("rstanarm 1",{
 
 
   tttmpz <- do_model_framing_lme4(tttmp)
-  tttmpz$RE %>%
-    tidyr::gather(
-      key = "variable",
-      val = "value",
-      -groupFctr, -groupID
-    )
 
+
+
+
+  hdp <- read.csv("https://stats.idre.ucla.edu/stat/data/hdp.csv")
+  hdp <- within(hdp, {
+    Married <- factor(Married, levels = 0:1, labels = c("no", "yes"))
+    DID <- factor(DID)
+    HID <- factor(HID)
+  })
+
+  m <- lme4::glmer(remission ~ IL6 + CRP + CancerStage + LengthofStay + Experience +
+               (1 | DID), data = hdp, family = binomial, control = glmerControl(optimizer = "bobyqa"))
+
+
+
+
+
+  tttmp <- lme4_glmer_structure_spec(
+    model.formula = "remission ~ (1 | CancerStage:Sex) + (1 | DID)",
+    model.data = hdp,
+    model.params = list(family = "binomial")
+  )
+
+  tttmp$mixmodel.formula$reTrms$cnms
+
+  tttmp <- lme4_glmer_structure_spec(
+    model.formula = "remission ~ (1 | CancerStage) + (1 | Sex) + (1 | CancerStage:Sex) + (1 | DID)",
+    model.data = hdp,
+    model.params = list(family = "binomial")
+  )
+
+  tttmp <- lme4_glmer_structure_spec(
+    model.formula = "remission ~ (1 + Married | Sex) + (1 | CancerStage:Sex) + (1 | DID)",
+    model.data = hdp,
+    model.params = list(family = "binomial")
+  )
+
+  tttmp <- lme4_glmer_structure_spec(
+    model.formula = "remission ~ CRP + (1 + CRP | Sex) + (1 | CancerStage:Sex) + (1 | DID)",
+    model.data = hdp,
+    model.params = list(family = "binomial")
+  )
+
+  tttmp <- lme4_glmer_structure_spec(
+    model.formula = "remission ~ Married + (1 + CRP | Sex) + (1 | CancerStage:Sex)",
+    model.data = hdp,
+    model.params = list(family = "binomial")
+  )
+
+
+  tttmp$mixmodel.formula.p$cnms.re
+  tmp <- tttmp$mixmodel.formula.p$Ztlist.re
+  tttmp$mixmodel.formula.p$effects.fe
+  names(tttmp$mixmodel.formula$reTrms$flist)
+
+  ## list of factors (can read values!)
+  tmp <- tttmp$mixmodel.formula$reTrms$flist
+  ##
+  tmp <- tttmp$mixmodel.formula$reTrms$Zt
+  tmp <- tttmp$mixmodel.formula$reTrms$Ztlist
+  tmp <- tttmp$mixmodel.formula$reTrms
+  tmp <- tttmp$mixmodel.formula$X
+  names(tmp)
+  colnames(tmp)
+  rownames(tmp$`1 | CancerStage:Sex`)
+
+  rstanarm_pad_reTrms(
+    tttmp$mixmodel.formula$reTrms$Ztlist,
+    tttmp$mixmodel.formula$reTrms$cnms,
+    tttmp$mixmodel.formula$reTrms$flist)
+
+
+
+
+  tmp <- tttmp$mixmodel.formula$reTrms$theta
+  tmp <- tttmp$mixmodel.formula$reTrms$Lind
+  tmp <- tttmp$mixmodel.formula$reTrms$flist
+
+
+
+
+    summary(tttmp)
+
+
+
+  tttmpz <- do_model_framing_lme4(tttmp)
+  redf <- tttmpz$RE.df
+
+  tttmp@cnms
+
+
+  names(tttmpz$RE.df)
+
+  summary(hdp)
 
 
   summary(tttmp)
