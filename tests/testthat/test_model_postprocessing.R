@@ -7,7 +7,15 @@ test_that("lme4",{
 })
 
 
-do_model_framing <- function()
+do_problem_framing <- function(model.formula, model.data, family){
+  tttmp <- lme4_glmer_formulator(
+    model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
+    model.data = lme4::cbpp,
+    model.params = list(family = family)
+  )
+
+}
+
 
 
 test_that("rstanarm 1",{
@@ -30,29 +38,80 @@ test_that("rstanarm 1",{
     model.params = test.model.params
   )
 
+  do_model_framing(
+    model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
+    model.data = lme4::cbpp,
+    family = "binomial"
+  )
+
   tttmp <- lme4_glmer_formulator(
     model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
     model.data = lme4::cbpp,
     model.params = list(family = "binomial")
   )
 
+  fit <- glmer(Reaction.dicho ~ Days + (Days | Subject),
+               lme4::sleepstudy,
+               family = binomial("logit"))
+
+  sleepstudy.mod <- lme4::sleepstudy %>%
+    dplyr::mutate(
+      Reaction.dicho = Reaction<median(Reaction)
+    )
+
+  tttmp <- lme4_glmer_formulator(
+    model.formula = "Reaction.dicho ~ Days + (Days | Subject)",
+    model.data = sleepstudy.mod,
+    model.params = list(family = "binomial")
+  )
+
+  lme4_glmer_formulator_parser(tttmp)
+
+  tttmp <- lme4_glmer_fit(
+    model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd) + (1 | herd:period)",
+    model.data = lme4::cbpp,
+    model.params = list(family = "binomial")
+  )
+
+  tttmp <- lme4_glmer_fit(
+    model.formula = "Reaction.dicho ~ Days + (Days | Subject)",
+    model.data = sleepstudy.mod,
+    model.params = list(family = "binomial")
+  )
+
+  broom::tidy(tttmp)
+
+
+  tttmpz <- do_model_framing_lme4(tttmp)
+  tttmpz$RE %>%
+    tidyr::gather(
+      key = "variable",
+      val = "value",
+      -groupFctr, -groupID
+    )
+
+
+
+  summary(tttmp)
+
+
+
+  tttmp.ml <- list()
+  tttmp.ml[[1]] <- tttmp
+  class(tttmp.ml) <- "merModList"
+
+  merTools::modelRandEffStats(tttmp.ml)
+  merTools::modelInfo(tttmp.ml)
+
+  glmerModList()
+
   tttmp$reTrms$theta
 
 
   #https://rdrr.io/cran/lme4/man/mkReTrms.html
 
-  tttmp$reTrms$cnms
-  # a list of column names of the random effects according to the grouping factors
-  cnms.re <- lapply(
-    names(tttmp$reTrms$cnms),
-    function(mix.comp.name){
-      data.frame(
-        param_name = tttmp$reTrms$cnms[[mix.comp.name]],
-        group_factor = mix.comp.name,
-        stringsAsFactors = FALSE
-      )
-    }
-  ) %>% dplyr::bind_rows()
+  tttmp$reTrms$flist
+
 
 
   tttmp$reTrms$Ztlist
@@ -93,7 +152,16 @@ test_that("rstanarm 1",{
   head(tttmp2$reTrms$flist)
   attr(tttmp2$reTrms$flist, "assign")
 
+  tttmp2$reTrms$Zt
 
+  pad_reTrms_l <- sapply(attr(tttmp2$reTrms$flist, "assign"), function(i) nlevels(tttmp2$reTrms$flist[[i]]))
+
+  library(Matrix)
+  rstanarm_pad_reTrms(
+    Ztlist = tttmp2$reTrms$Ztlist,
+    cnms = tttmp2$reTrms$cnms,
+    flist = tttmp2$reTrms$flist
+    )
 
 
   tttmp2$reTrms$Lind
@@ -135,60 +203,4 @@ test_that("rstanarm 1",{
 })
 
 
-
-rstanarm_glmer <- function (formula, data = NULL, family = gaussian, subset, weights,
-          na.action = getOption("na.action", "na.omit"), offset, contrasts = NULL,
-          ..., prior = normal(), prior_intercept = normal(), prior_aux = exponential(),
-          prior_covariance = decov(), prior_PD = FALSE, algorithm = c("sampling",
-                                                                      "meanfield", "fullrank"), adapt_delta = NULL, QR = FALSE,
-          sparse = FALSE)
-{
-  call <- match.call(expand.dots = TRUE)
-  mc <- match.call(expand.dots = FALSE)
-  data <- validate_data(data)
-  family <- validate_family(family)
-  mc[[1]] <- quote(lme4::glFormula)
-  mc$control <- make_glmerControl()
-  mc$prior <- mc$prior_intercept <- mc$prior_covariance <- mc$prior_aux <- mc$prior_PD <- mc$algorithm <- mc$scale <- mc$concentration <- mc$shape <- mc$adapt_delta <- mc$... <- mc$QR <- mc$sparse <- NULL
-  glmod <- eval(mc, parent.frame())
-  X <- glmod$X
-  y <- glmod$fr[, as.character(glmod$formula[2L])]
-  if (is.matrix(y) && ncol(y) == 1L)
-    y <- as.vector(y)
-  offset <- model.offset(glmod$fr) %ORifNULL% double(0)
-  weights <- validate_weights(weights)
-  if (is.null(prior))
-    prior <- list()
-  if (is.null(prior_intercept))
-    prior_intercept <- list()
-  if (is.null(prior_aux))
-    prior_aux <- list()
-  if (is.null(prior_covariance))
-    stop("'prior_covariance' can't be NULL.", call. = FALSE)
-  group <- glmod$reTrms
-  group$decov <- prior_covariance
-  algorithm <- match.arg(algorithm)
-  stanfit <- rstanarm::stan_glm.fit(x = X, y = y, weights = weights,
-                          offset = offset, family = family, prior = prior, prior_intercept = prior_intercept,
-                          prior_aux = prior_aux, prior_PD = prior_PD, algorithm = algorithm,
-                          adapt_delta = adapt_delta, group = group, QR = QR, sparse = sparse,
-                          ...)
-  if (family$family == "Beta regression")
-    family$family <- "beta"
-  sel <- apply(X, 2L, function(x) !all(x == 1) && length(unique(x)) <
-                 2)
-  X <- X[, !sel, drop = FALSE]
-  Z <- pad_reTrms(Ztlist = group$Ztlist, cnms = group$cnms,
-                  flist = group$flist)$Z
-  colnames(Z) <- b_names(names(stanfit), value = TRUE)
-  fit <- nlist(stanfit, family, formula, offset, weights,
-               x = if (getRversion() < "3.2.0")
-                 cBind(X, Z)
-               else cbind2(X, Z), y = y, data, call, terms = NULL,
-               model = NULL, na.action = attr(glmod$fr, "na.action"),
-               contrasts, algorithm, glmod, stan_function = "stan_glmer")
-  out <- stanreg(fit)
-  class(out) <- c(class(out), "lmerMod")
-  return(out)
-}
 
