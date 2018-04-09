@@ -12,13 +12,14 @@ rstanarm_glmer_fit <- function(model.formula, model.data, model.params){
 #' @export
 rstanarm_glmer_postprocess <- function(model.fit2){
 
-  class(model.fit2)
+  #class(model.fit2)
   rstanarm::ngrps(model.fit2)
-  coef(model.fit2)
+  #coef(model.fit2)
   ranef.df <- rstanarm::ranef(model.fit2)  %>% as.data.frame()
   fixef.df <- rstanarm::fixef(model.fit2)  %>% as.data.frame()
   vcov.df <- vcov(model.fit2) %>% as.data.frame()
-  head(ranef.df)
+  VarCorr.df <- VarCorr(model.fit2) %>% as.data.frame()
+  #head(ranef.df)
 
   ranef.df.ext <- ranef.df %>%
     dplyr::mutate(
@@ -51,14 +52,20 @@ rstanarm_glmer_postprocess <- function(model.fit2){
 
   #https://tjmahr.github.io/visualizing-uncertainty-rstanarm/
 
-  summary(model.fit2, pars = c("alpha", "beta"))
-  summary(model.fit2, pars = c("varying"))
+  #summary(model.fit2, pars = c("alpha", "beta"))
+  #summary(model.fit2, pars = c("varying"))
 
   summary.df.left <- summary.df %>%
     dplyr::filter(!(coef.name %in% ranef.df.ext$coef.name)) %>%
     dplyr::filter(!(coef.name %in% fixef.df.ext$coef.name))
 
-
+  list(
+    ranef.df = ranef.df.out,
+    fixef.df = fixef.df.out,
+    summary.df.left = summary.df.left,
+    VarCorr.df = VarCorr.df,
+    vcov.df = vcov.df
+  )
 
 
 }

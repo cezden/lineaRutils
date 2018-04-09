@@ -38,6 +38,10 @@ test_that("rstanarm 1",{
     model.params = test.model.params
   )
 
+  model.fit2.post <- rstanarm_glmer_postprocess(model.fit2)
+  model.fit2.post$summary.df.left
+  model.fit2.post$VarCorr.df
+
   class(model.fit2)
   rstanarm::ngrps(model.fit2)
   coef(model.fit2)
@@ -98,7 +102,10 @@ test_that("rstanarm 1",{
     model.params = test.model.params
   )
 
-
+  model.fit2.post <- rstanarm_glmer_postprocess(model.fit2)
+  model.fit2.post$fixef.df
+  model.fit2.post$summary.df.left
+  model.fit2.post$VarCorr.df
 
 
   tttmp <- lme4_glmer_structure_spec(
