@@ -23,6 +23,60 @@ rstanarm_model_invariants <- function(m_fit_post, m_struct){
 
   testthat::expect_equivalent(fixeff.1, fixeff.2)
 
+}
+
+
+model_post_descr_equivalent <- function(model.lme4.post, model.stan.post){
+  #ranef.df
+  testthat::expect_equal(nrow(model.lme4.post$ranef.df), nrow(model.stan.post$ranef.df))
+
+  df1 <- model.lme4.post$ranef.df %>%
+    dplyr::select(grpvar, term.chr, grp.chr) %>%
+    dplyr::arrange(grpvar, term.chr, grp.chr)
+
+  df2 <- model.stan.post$ranef.df %>%
+    dplyr::select(grpvar, term.chr, grp.chr) %>%
+    dplyr::arrange(grpvar, term.chr, grp.chr)
+
+  testthat::expect_equivalent(df1, df2)
+
+  # TODO: other components
+
+}
+
+expect_models_equivalent <- function(model_struct, model_fit.lme4, model_fit.stan){
+
+  testthat::expect_is(model_struct, "mixl_glmer_structure_spec")
+
+  model.fit.stan.post <- rstanarm_glmer_postprocess(model_fit.stan)
+  model.fit.lme4.post <- lme4_glmer_postprocess(model_fit.lme4)
+
+  exp_fam_chr <- model_struct$mixmodel.formula$family$family
+  exp_link_chr <- model_struct$mixmodel.formula$family$link
+
+
+  model.fam.4 <- family(model_fit.lme4)
+
+  testthat::expect_equal(model.fam.4$family, exp_fam_chr)
+  testthat::expect_equal(model.fam.4$link, exp_link_chr)
+
+
+  model.fam.s <- family(model_fit.stan)
+
+  testthat::expect_equal(model.fam.s$family, exp_fam_chr)
+  testthat::expect_equal(model.fam.s$link, exp_link_chr)
+
+
+  model_post_descr_equivalent(
+    model.lme4.post = model.fit.lme4.post,
+    model.stan.post = model.fit.stan.post
+  )
+
+  rstanarm_model_invariants(
+    m_fit_post = model.fit.stan.post,
+    m_struct = model_struct
+  )
+
 
 }
 
@@ -85,57 +139,6 @@ test_that("rstanarm ~ 1 + (1 | herd) + (1 | herd:period)",{
   return()
 
 
-
-  class(model.fit2)
-  rstanarm::ngrps(model.fit2)
-  coef(model.fit2)
-  rstanarm::ranef(model.fit2)  %>% as.data.frame()
-  rstanarm::fixef(model.fit2)  %>% as.data.frame()
-  VarCorr(model.fit2) %>% as.data.frame()
-  vcov(model.fit2) %>% as.data.frame()
-  plot(model.fit2)
-
-
-
-
-
-
-  sleepstudy.mod <- lme4::sleepstudy %>%
-    dplyr::mutate(
-      Reaction.dicho = Reaction<median(Reaction)
-    )
-
-  test.model.struct <- mixl_glmer_structure_spec(
-    model.formula = "Reaction.dicho ~ Days + (Days | Subject)",
-    model.data = sleepstudy.mod,
-    model.params = list(family = "binomial")
-  )
-
-  #lme4_glmer_formulator_parser(tttmp)
-
-  test.model.params.stan <- list(
-    chains = 2,
-    iter = 100,
-    thin = 1,
-    open_progress = FALSE,
-    show_messages = FALSE
-  )
-
-  testthat::capture_output({
-    model.fit2 <- rstanarm_fit(
-      test.model.struct,
-      test.model.params.stan
-    )
-  })
-
-  model.fit2.post <- rstanarm_glmer_postprocess(model.fit2)
-
-  rstanarm_model_invariants(
-    m_fit_post = model.fit2.post,
-    m_struct = test.model.struct
-  )
-
-  model.fit2.post$vcov.df
 
   fit <- glmer(Reaction.dicho ~ Days + (Days | Subject),
                lme4::sleepstudy,
@@ -426,11 +429,56 @@ test_that("rstanarm, Reaction.dicho ~ Days + (Days | Subject)",{
 
 })
 
+
+
+
+test_that("rstanarm + lme4, Reaction.dicho ~ Days + (Days | Subject), probit link",{
+
+  test.model.formula <- "Reaction.dicho ~ Days + (Days | Subject)"
+  test.model.data <- lme4::sleepstudy %>%
+    dplyr::mutate(
+      Reaction.dicho = Reaction<median(Reaction)
+    )
+
+  test.model.struct <- mixl_glmer_structure_spec(
+    model.formula = test.model.formula,
+    model.data = test.model.data,
+    #model.params = list(family = "binomial", link = "probit")
+    model.params = list(family = binomial(link = "probit"))
+  )
+
+  test.model.params <- list(
+    chains = 2,
+    iter = 100,
+    thin = 1,
+    open_progress = FALSE,
+    show_messages = FALSE
+  )
+
+  testthat::capture_output({
+    model.fit.stan <- rstanarm_fit(
+      test.model.struct,
+      test.model.params
+    )
+  })
+
+  model.fit.lme4 <- lme4_fit(
+    test.model.struct,
+    list()
+  )
+
+  expect_models_equivalent(
+    model_struct = test.model.struct,
+    model_fit.lme4 = model.fit.lme4,
+    model_fit.stan = model.fit.stan
+  )
+
+})
+
 test_that("rstanarm, hdp",{
 
-  return()
-
   test.model.formula <- "remission ~ (1 | CancerStage:Sex) + (1 | DID)"
+  #test.model.formula = "remission ~ CRP + (1 + CRP | Sex) + (1 | CancerStage:Sex) + (1 | DID)"
   test.model.data <- lineaRutils::ds_hdp
 
   test.model.struct <- mixl_glmer_structure_spec(
@@ -456,15 +504,14 @@ test_that("rstanarm, hdp",{
 
   model.fit.lme4 <- lme4_fit(
     test.model.struct,
-    test.model.params = list()
+    list()
   )
 
-  model.fit.stan.post <- rstanarm_glmer_postprocess(model.fit.stan)
-  do_model_framing_lme4()
 
-  rstanarm_model_invariants(
-    m_fit_post = model.fit.stan.post,
-    m_struct = test.model.struct
+  expect_models_equivalent(
+    model_struct = test.model.struct,
+    model_fit.lme4 = model.fit.lme4,
+    model_fit.stan = model.fit.stan
   )
 
 })

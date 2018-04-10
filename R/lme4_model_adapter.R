@@ -17,6 +17,17 @@ lme4_glmer_fit <- function(model.formula, model.data, model.params){
 }
 
 
+lme4_glmer_fit_paramlist <- function(model.params, post_edit = TRUE){
+  mixmodel <- do.call(what = lme4::glmer, args = model.params)
+  if (post_edit) {
+    mixmodel@call$data <- NULL
+    mixmodel@call$control <- NULL
+  }
+  mixmodel
+}
+
+
+
 #' @export
 lme4_glmer_fit2 <- function(model.formula, model.data, model.params){
   ###merTools::glmerModList
@@ -28,9 +39,8 @@ lme4_glmer_fit2 <- function(model.formula, model.data, model.params){
   #model.form <- as.formula(model.formula, env = mfm)
   model.params$data <- data
   model.params$formula <- model.formula
-  mixmodel <- do.call(what = lme4::glmer, args = model.params)
-  mixmodel@call$data <- NULL
-  mixmodel@call$control <- NULL
+
+  mixmodel <- lme4_glmer_fit_paramlist(model.params, post_edit = TRUE)
   mixmodel
 }
 
@@ -64,6 +74,14 @@ lme4_glmer_fit_set <- function(model.desc.set, model.data, model.fit.params.defa
     })
 
   models
+}
+
+#' @export
+lme4_fit.mixl_glmer_structure_spec <- function(glmer_spec, fit.params){
+  model.params <- c(glmer_spec$model.params, fit.params)
+
+  mixmodel <- lme4_glmer_fit_paramlist(model.params, post_edit = TRUE)
+  mixmodel
 }
 
 

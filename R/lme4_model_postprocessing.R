@@ -1,61 +1,4 @@
 #' @export
-lme4_glmer_formulator_parser <- function(mix_glForm){
-  cnms <- mix_glForm$reTrms$cnms
-  # a list of column names of the random effects according to the grouping factors
-  cnms.re <- lapply(
-    names(cnms),
-    function(mix.comp.name){
-      data.frame(
-        term = cnms[[mix.comp.name]],
-        grpvar = mix.comp.name,
-        stringsAsFactors = FALSE
-      )
-    }
-  ) %>% dplyr::bind_rows()
-
-  Ztlist <- mix_glForm$reTrms$Ztlist
-  # a list of column names of the random effects according to the grouping factors
-  Ztlist.re <- lapply(
-    names(Ztlist),
-    function(mix.comp.name){
-      data.frame(
-        factor_value = rownames(Ztlist[[mix.comp.name]]),
-        component = mix.comp.name,
-        stringsAsFactors = FALSE
-      )
-    }
-  ) %>% dplyr::bind_rows()
-
-  list(
-    cnms.re = cnms.re,
-    Ztlist.re = Ztlist.re,
-    effects.fe = colnames(mix_glForm$X)
-  )
-}
-
-
-#' @export
-mixl_glmer_structure_spec <- function(model.formula, model.data, model.params){
-  # binding environment
-  model.form <- as.formula(model.formula)
-  model.params$data <- model.data
-  model.params$formula <- model.form
-  mixmodel_formula <- do.call(what = lme4::glFormula, args = model.params)
-  ret <- list(
-    model.params = model.params,
-    mixmodel.formula = mixmodel_formula,
-    mixmodel.formula.p = lme4_glmer_formulator_parser(mixmodel_formula)
-  )
-  class(ret) <- 'mixl_glmer_structure_spec'
-
-  ret
-}
-
-
-
-
-
-#' @export
 do_model_framing_lme4 <- function(model){
 
   mod_RE = merTools::REextract(model)
@@ -72,6 +15,46 @@ do_model_framing_lme4 <- function(model){
     RE.df = mod_RE_df
   )
 }
+
+
+#' @export
+lme4_glmer_postprocess <- function(model.fit.lme4){
+
+  # extract the conditional modes of the random effects from a fitted model object
+
+  ranef.df <- lme4::ranef(model.fit.lme4, condVar = TRUE) %>% as.data.frame()
+  fixef.df <- lme4::fixef(model.fit.lme4)  %>% as.data.frame()
+  #variance-covariance matrix of the fixed effect terms
+  vcov.df <- vcov(model.fit.lme4) %>% as.matrix() %>% as.data.frame()
+
+  # estimated variances, standard deviations, and correlations between the random-effects terms in a mixed-effects model
+  VarCorr.df <- lme4::VarCorr(model.fit.lme4) %>% as.data.frame()
+
+  ranef.df.ext <- ranef.df %>%
+    dplyr::mutate(
+      term.num = as.numeric(term),
+      term.chr = as.character(term),
+      grp.num = as.numeric(grp),
+      grp.chr = as.character(grp)
+    )
+
+  fixef.df.ext <- fixef.df
+  fixef.df.ext$coef.name <- rownames(fixef.df)
+  rownames(fixef.df.ext) <- NULL
+
+
+  #frm <- do_model_framing_lme4(model = model.fit.lme4)
+
+  list(
+    ranef.df = ranef.df.ext,
+    fixef.df = fixef.df.ext,
+    VarCorr.df = VarCorr.df,
+    vcov.df = vcov.df
+  )
+
+
+}
+
 
 
 
