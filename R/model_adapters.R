@@ -1,3 +1,14 @@
+#' @export
+rstanarm_fit <- function(x, y, ...) {
+  UseMethod("rstanarm_fit")
+}
+
+#' @export
+lme4_fit <- function(x, y, ...) {
+  UseMethod("lme4_fit")
+}
+
+
 #' The model fitting environment configuration
 #' @export
 fitting_strategy <- function(model_output_dir = "./"){

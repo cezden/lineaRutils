@@ -2,7 +2,7 @@ context("lme4 env wrap")
 
 call_test_loc <- function(a, b, c){
 
-  cc <- lme4_glmer_fit(
+  cc <- lme4_glmer_fit2(
     model.formula = a,
     model.data = b,
     model.params = c
@@ -31,7 +31,33 @@ verify_fit <- function(model.fit, test.model.formula, test.model.family){
   testthat::expect_is(model.profile, "thpr")
   confint(model.profile)
 
+  summary_output <- testthat::capture_output_lines({
+    print(summary(model.fit))
+  })
+  #print(summary_output)
+
+  testthat::expect_lt(length(summary_output), 30)
+
 }
+
+test_that("classical fit 0",{
+
+  model.fit0 <- lme4::glmer(
+    cbind(incidence, size - incidence) ~ 1 + (1 | herd),
+    data = lme4::cbpp,
+    family = "binomial"
+    )
+
+
+  verify_fit(
+    model.fit = model.fit0,
+    test.model.formula = "cbind(incidence, size - incidence) ~ 1 + (1 | herd)",
+    test.model.family = "binomial"
+  )
+  #print(summary(model.fit))
+
+})
+
 
 test_that("fitted model can be profiled in different environment 1",{
   test.model.data <- lme4::cbpp
@@ -56,7 +82,7 @@ test_that("fitted model can be profiled in different environment 2",{
     family = binomial,
     control = lme4::glmerControl(optimizer = "bobyqa")
   )
-  model.fit <- lme4_glmer_fit(
+  model.fit <- lme4_glmer_fit2(
     model.formula = test.model.formula,
     model.data = test.model.data,
     model.params = test.model.params
@@ -88,3 +114,4 @@ test_that("fitted model can be profiled in different environment 3",{
     )
 
 })
+

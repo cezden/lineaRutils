@@ -16,6 +16,24 @@ lme4_glmer_fit <- function(model.formula, model.data, model.params){
   mixmodel
 }
 
+
+#' @export
+lme4_glmer_fit2 <- function(model.formula, model.data, model.params){
+  ###merTools::glmerModList
+  # binding environment
+  data <- model.data
+  #mfm <- new.env()
+  #mfm$data <- data
+
+  #model.form <- as.formula(model.formula, env = mfm)
+  model.params$data <- data
+  model.params$formula <- model.formula
+  mixmodel <- do.call(what = lme4::glmer, args = model.params)
+  mixmodel@call$data <- NULL
+  mixmodel@call$control <- NULL
+  mixmodel
+}
+
 #' @export
 lme4_glmer_fit_set <- function(model.desc.set, model.data, model.fit.params.default, fitting.strategy = fitting_strategy(), verbose = FALSE){
 

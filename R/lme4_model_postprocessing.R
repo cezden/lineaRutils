@@ -6,8 +6,8 @@ lme4_glmer_formulator_parser <- function(mix_glForm){
     names(cnms),
     function(mix.comp.name){
       data.frame(
-        param_name = cnms[[mix.comp.name]],
-        group_factor = mix.comp.name,
+        term = cnms[[mix.comp.name]],
+        grpvar = mix.comp.name,
         stringsAsFactors = FALSE
       )
     }
@@ -35,7 +35,7 @@ lme4_glmer_formulator_parser <- function(mix_glForm){
 
 
 #' @export
-lme4_glmer_structure_spec <- function(model.formula, model.data, model.params){
+mixl_glmer_structure_spec <- function(model.formula, model.data, model.params){
   # binding environment
   model.form <- as.formula(model.formula)
   model.params$data <- model.data
@@ -46,7 +46,7 @@ lme4_glmer_structure_spec <- function(model.formula, model.data, model.params){
     mixmodel.formula = mixmodel_formula,
     mixmodel.formula.p = lme4_glmer_formulator_parser(mixmodel_formula)
   )
-  class(ret) <- 'lme4_glmer_structure_spec'
+  class(ret) <- 'mixl_glmer_structure_spec'
 
   ret
 }
