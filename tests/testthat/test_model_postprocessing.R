@@ -40,6 +40,23 @@ model_post_descr_equivalent <- function(model.lme4.post, model.stan.post){
 
   testthat::expect_equivalent(df1, df2)
 
+  #vcov.df
+  df1 <- model.lme4.post$vcov.df
+  df2 <- model.stan.post$vcov.df
+  testthat::expect_equivalent(names(df1), names(df2))
+
+  #VarCorr.df
+  df1 <- model.lme4.post$VarCorr.df %>%
+    dplyr::select(grp, var1, var2) %>%
+    dplyr::arrange(grp, var1, var2)
+
+  df2 <- model.stan.post$VarCorr.df %>%
+    dplyr::select(grp, var1, var2) %>%
+    dplyr::arrange(grp, var1, var2)
+
+  testthat::expect_equivalent(df1, df2)
+
+
   # TODO: other components
 
 }
@@ -81,6 +98,32 @@ expect_models_equivalent <- function(model_struct, model_fit.lme4, model_fit.sta
 }
 
 
+stan_output_adjuster <- function(test.model.struct, test.model.params, ign_convergence = TRUE){
+  model.fit.stan <- NULL
+  out_put <- with_warnings(
+    testthat::capture_output({
+      model.fit.stan <- rstanarm_fit(
+        test.model.struct,
+        test.model.params
+      )
+    })
+  )
+
+  ign_messages <- c()
+  if (ign_convergence) {
+    ign_messages <- c(ign_messages, "Markov chains did not converge! Do not analyze results!")
+  }
+
+  ttv <- lapply(out_put$warnings, function(w){
+    if (!(w$message %in% ign_messages)) {
+      print(w)
+      warning(w)
+    }
+  })
+
+  model.fit.stan
+}
+
 test_that("lme4",{
 
   testthat::expect_true(TRUE)
@@ -97,6 +140,35 @@ do_problem_framing <- function(model.formula, model.data, family){
 
 }
 
+std_lme4_rstanarm_equiv_test <- function(test.model.struct){
+
+  test.model.params <- list(
+    chains = 2,
+    iter = 100,
+    thin = 1,
+    open_progress = FALSE,
+    show_messages = FALSE
+  )
+
+  model.fit.stan <- stan_output_adjuster(
+    test.model.struct = test.model.struct,
+    test.model.params = test.model.params,
+    ign_convergence = TRUE
+  )
+
+  model.fit.lme4 <- lme4_fit(
+    test.model.struct,
+    list()
+  )
+
+
+  expect_models_equivalent(
+    model_struct = test.model.struct,
+    model_fit.lme4 = model.fit.lme4,
+    model_fit.stan = model.fit.stan
+  )
+
+}
 
 
 test_that("rstanarm ~ 1 + (1 | herd) + (1 | herd:period)",{
@@ -122,19 +194,18 @@ test_that("rstanarm ~ 1 + (1 | herd) + (1 | herd:period)",{
   testthat::expect_is(test.model.struct, "mixl_glmer_structure_spec")
 
 
-  testthat::capture_output({
-    model.fit2 <- rstanarm_fit(
-      test.model.struct,
-      test.model.params
-    )
-  })
+  model.fit.stan <- stan_output_adjuster(
+    test.model.struct = test.model.struct,
+    test.model.params = test.model.params,
+    ign_convergence = TRUE
+  )
 
-  model.fit2.post <- rstanarm_glmer_postprocess(model.fit2)
+  model.fit.stan.post <- rstanarm_glmer_postprocess(model.fit.stan)
 
   rstanarm_model_invariants(
-    m_fit_post = model.fit2.post,
+    m_fit_post = model.fit.stan.post,
     m_struct = test.model.struct
-    )
+  )
 
   return()
 
@@ -413,17 +484,16 @@ test_that("rstanarm, Reaction.dicho ~ Days + (Days | Subject)",{
     show_messages = FALSE
   )
 
-  testthat::capture_output({
-    model.fit2 <- rstanarm_fit(
-      test.model.struct,
-      test.model.params
-    )
-  })
+  model.fit.stan <- stan_output_adjuster(
+    test.model.struct = test.model.struct,
+    test.model.params = test.model.params,
+    ign_convergence = TRUE
+  )
 
-  model.fit2.post <- rstanarm_glmer_postprocess(model.fit2)
+  model.fit.stan.post <- rstanarm_glmer_postprocess(model.fit.stan)
 
   rstanarm_model_invariants(
-    m_fit_post = model.fit2.post,
+    m_fit_post = model.fit.stan.post,
     m_struct = test.model.struct
   )
 
@@ -447,35 +517,11 @@ test_that("rstanarm + lme4, Reaction.dicho ~ Days + (Days | Subject), probit lin
     model.params = list(family = binomial(link = "probit"))
   )
 
-  test.model.params <- list(
-    chains = 2,
-    iter = 100,
-    thin = 1,
-    open_progress = FALSE,
-    show_messages = FALSE
-  )
-
-  testthat::capture_output({
-    model.fit.stan <- rstanarm_fit(
-      test.model.struct,
-      test.model.params
-    )
-  })
-
-  model.fit.lme4 <- lme4_fit(
-    test.model.struct,
-    list()
-  )
-
-  expect_models_equivalent(
-    model_struct = test.model.struct,
-    model_fit.lme4 = model.fit.lme4,
-    model_fit.stan = model.fit.stan
-  )
+  std_lme4_rstanarm_equiv_test(test.model.struct)
 
 })
 
-test_that("rstanarm, hdp",{
+test_that("rstanarm, hdp 1",{
 
   test.model.formula <- "remission ~ (1 | CancerStage:Sex) + (1 | DID)"
   #test.model.formula = "remission ~ CRP + (1 + CRP | Sex) + (1 | CancerStage:Sex) + (1 | DID)"
@@ -487,34 +533,25 @@ test_that("rstanarm, hdp",{
     model.params = list(family = "binomial")
   )
 
-  test.model.params <- list(
-    chains = 2,
-    iter = 100,
-    thin = 1,
-    open_progress = FALSE,
-    show_messages = FALSE
-  )
-
-  testthat::capture_output({
-    model.fit.stan <- rstanarm_fit(
-      test.model.struct,
-      test.model.params
-    )
-  })
-
-  model.fit.lme4 <- lme4_fit(
-    test.model.struct,
-    list()
-  )
-
-
-  expect_models_equivalent(
-    model_struct = test.model.struct,
-    model_fit.lme4 = model.fit.lme4,
-    model_fit.stan = model.fit.stan
-  )
+  std_lme4_rstanarm_equiv_test(test.model.struct)
 
 })
 
+test_that("rstanarm, hdp 2",{
+
+
+  #test.model.formula = "remission ~ CRP + (1 + CRP | Sex) + (1 | CancerStage)"
+  test.model.formula <- "remission ~ CRP + (1 + CRP | Sex) + (1 | CancerStage) + (1 | DID)"
+  test.model.data <- lineaRutils::ds_hdp
+
+  test.model.struct <- mixl_glmer_structure_spec(
+    model.formula = test.model.formula,
+    model.data = test.model.data,
+    model.params = list(family = "binomial")
+  )
+
+  std_lme4_rstanarm_equiv_test(test.model.struct)
+
+})
 
 

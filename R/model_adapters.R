@@ -49,7 +49,7 @@ lme4_glmer_formulator_parser <- function(mix_glForm){
 #'
 #' @param model.formula (\code{chr}) the model formula
 #' @param model.data (\code{data.frame}) the model data
-#' @param model.params (\code{list}) the model structure description: \code{family}, \code{link}
+#' @param model.params (\code{list}) the model structure description: \code{family}
 #' @export
 mixl_glmer_structure_spec <- function(model.formula, model.data, model.params){
   # binding environment

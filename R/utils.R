@@ -47,3 +47,19 @@ get_ds_hdp <- function(){
   #devtools::use_data(ds_hdp, internal = FALSE)
   ds_hdp
 }
+
+#' (Utils) Warnings and Function Call Value Collection
+#'
+#' Based on the solution http://tolstoy.newcastle.edu.au/R/help/04/06/0217.html by Luke Tierney
+#' quoted at https://stackoverflow.com/questions/3903157/how-can-i-check-whether-a-function-call-results-in-a-warning
+#' @export
+with_warnings <- function(expr) {
+  lineaRutils__myWarnings <- NULL
+  wHandler <- function(w) {
+    lineaRutils__myWarnings <<- c(lineaRutils__myWarnings, list(w))
+    invokeRestart("muffleWarning")
+  }
+  val <- withCallingHandlers(expr, warning = wHandler)
+  list(value = val, warnings = lineaRutils__myWarnings)
+}
+
