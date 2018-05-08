@@ -1,4 +1,4 @@
-#' MixL Model PreDescription
+#' (MixL) Model PreDescription
 #'
 #' @param model.raw.description.named \code{list(model.name = list(...))}
 #' @export
@@ -49,6 +49,7 @@ is_extension.model_description_pre <- function(model.desc){
   model.desc$obj.properties$is.extension
 }
 
+#' (MixL) Get Parent Model Name
 get_parent_name <- function(x, y, ...) {
   UseMethod("get_parent_name")
 }

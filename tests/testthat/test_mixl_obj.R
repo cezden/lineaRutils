@@ -103,7 +103,7 @@ test_that("model_pool_parser",{
 
 })
 
-test_that("model_pool_parser 2 ",{
+test_that("model_pool_parser 2 (file)",{
 
   raw.data.named <- yaml::read_yaml(file = "./data/test1_pos.yml")
 

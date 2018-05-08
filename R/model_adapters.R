@@ -8,7 +8,7 @@ lme4_fit <- function(x, y, ...) {
   UseMethod("lme4_fit")
 }
 
-
+#' Mixed-model formula parser
 #' @export
 lme4_glmer_formulator_parser <- function(mix_glForm){
   cnms <- mix_glForm$reTrms$cnms
@@ -46,6 +46,15 @@ lme4_glmer_formulator_parser <- function(mix_glForm){
 
 
 #' (MixL) Model structure specification
+#'
+#' Describes the model structure:
+#' \itemize{
+#'     \item{model formula,}
+#'     \item{family & link,}
+#'     \item{model data.}
+#' }
+#' Resulting object can be used by \link{lme4_fit.mixl_glmer_structure_spec} and \link{rstanarm_fit.mixl_glmer_structure_spec} methods.
+#'
 #'
 #' @param model.formula (\code{chr}) the model formula
 #' @param model.data (\code{data.frame}) the model data
@@ -86,7 +95,7 @@ fitting_strategy <- function(model_output_dir = "./"){
 }
 
 
-
+#' Generic object dispatcher
 get_filepath <- function(x, y, ...) {
   UseMethod("get_filepath")
 }

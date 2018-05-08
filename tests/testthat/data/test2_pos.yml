@@ -1,0 +1,12 @@
+model1:
+  extends: model0
+  components:
+  - (1 | E)
+
+model0:
+  response: cbind(A,B)
+  family: binomial
+  components:
+  - (1 | C)
+  - (1 | D)
+

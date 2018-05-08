@@ -82,7 +82,7 @@ mixl_specification_preparse <- function(raw_spec){
 }
 
 
-#' Extends-aware Model Parsing Order
+#' Dependency-satisfying Model Parsing Sequence
 #' @export
 mixl_specification_resolve_inner_preparse <- function(raw_spec, verbose = FALSE){
   spec.df <- mixl_specification_preparse(raw_spec) %>%
